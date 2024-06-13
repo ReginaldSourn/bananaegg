@@ -1,0 +1,28 @@
+# Build artifacts
+build/
+*.elf
+*.bin
+*.map
+*.uf2
+*.d
+
+# SDK configuration
+sdkconfig
+sdkconfig.old
+
+# IDE-specific files
+.cproject
+.project
+*.launch
+.settings/
+
+# Python environment files
+*.py[cod]
+**/__pycache__/
+.venv/
+
+# System files
+.DS_Store
+
+# Miscellaneous files
+tags
