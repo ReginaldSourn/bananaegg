@@ -1,0 +1,12 @@
+config EXAMPLE_PIN_MOSI
+    int "MOSI Pin"
+    default 11
+config EXAMPLE_PIN_MISO
+    int "MISO Pin"
+    default 13
+config EXAMPLE_PIN_CLK
+    int "CLK Pin"
+    default 12
+config EXAMPLE_PIN_CS
+    int "CS Pin"
+    default -1
