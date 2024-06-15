@@ -1,12 +1,41 @@
-config EXAMPLE_PIN_MOSI
-    int "MOSI Pin"
-    default 11
-config EXAMPLE_PIN_MISO
-    int "MISO Pin"
-    default 13
-config EXAMPLE_PIN_CLK
-    int "CLK Pin"
-    default 12
-config EXAMPLE_PIN_CS
-    int "CS Pin"
-    default -1
+# Flash Configuration
+
+menu "Flash Configuration"
+
+config FLASH_SIZE
+    default 8MB
+    help
+        Select the size of the flash memory chip used in your device.
+
+config FLASH_SPI_SPEED
+    default 80MHz
+    help
+        Set the SPI clock speed used to communicate with the flash chip. 
+        Higher speeds can improve performance but might not be supported by all flash chips.
+
+endmenu
+
+# PSRAM Configuration
+
+menu "PSRAM Configuration"
+
+config PSRAM_MODE
+    default "octal"
+    help
+        Select the mode (quad or octal) in which the PSRAM chip operates.
+
+config PSRAM_SPEED
+    default 80MHz
+    help
+        Set the clock speed of the PSRAM chip. 
+
+
+menu "WEAR_LEVELLING"
+config CONFIG_VFS_WL_DEBUG_LEVEL
+default "5"
+    #My own config
+config CONFIG_WL_SECTOR_SIZE_512
+default "y"
+
+#
+endmenu

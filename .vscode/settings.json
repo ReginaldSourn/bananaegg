@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "stat.h": "c"
+    },
+    "idf.adapterTargetName": "esp32s3",
+    "idf.openOcdConfigs": [
+        "board/esp32s3-bridge.cfg"
+    ],
+    "idf.port": "/dev/ttyACM0",
+    "idf.flashType": "UART"
+}

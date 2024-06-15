@@ -25,10 +25,13 @@
 #include <string.h>
 #include <sys/unistd.h>
 #include <sys/stat.h>
-#include "esp_vfs_fat.h"
+#include "esp_spiffs.h"
 #include "sdmmc_cmd.h"
-
-
+#include "wear_levelling.h"
+#include "nvs_flash.h"
+#include "esp_partition.h"
+#include "ff.h"
+#include <dirent.h>
 #define EXAMPLE_MAX_CHAR_SIZE    64
 
 #define MOUNT_POINT "/sdcard"
@@ -47,14 +50,16 @@
 #define I2C_MASTER_TX_BUF_DISABLE   0                          /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0                          /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_TIMEOUT_MS       1000
+#define STORAGE_PARTITION_LABEL "storage"
 
-static const char *TAG = "example";
+static const char *TAG_LCD = "LCD";
+static const char *TAG_MEM = "FlashLog";
 uint8_t sd_flag = 0;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (18 * 1000 * 1000)
+#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (19 * 1000 * 1000)
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 #define EXAMPLE_PIN_NUM_BK_LIGHT       -1
@@ -79,7 +84,7 @@ uint8_t sd_flag = 0;
 #define EXAMPLE_PIN_NUM_DATA14         41 // R6
 #define EXAMPLE_PIN_NUM_DATA15         40 // R7
 #define EXAMPLE_PIN_NUM_DISP_EN        -1
-
+#define ESP_VFS_PATH_MAX             10
 // The pixel number in horizontal and vertical
 #define EXAMPLE_LCD_H_RES              800
 #define EXAMPLE_LCD_V_RES              480
@@ -141,11 +146,50 @@ void example_touchpad_read( lv_indev_drv_t * drv, lv_indev_data_t * data )
         data->point.x = touchpad_x[0];
         data->point.y = touchpad_y[0];
         data->state = LV_INDEV_STATE_PR;
-        ESP_LOGI(TAG, "X=%u Y=%u", data->point.x, data->point.y);
+        ESP_LOGI(TAG_LCD, "X=%u Y=%u", data->point.x, data->point.y);
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+void print_mounted_partition_info(const esp_partition_t* partition) {
+    if (partition) {
+        ESP_LOGI(TAG_MEM, "Mounted Partition Information:");
+        ESP_LOGI(TAG_MEM, "  Label: %s", partition->label);
+        ESP_LOGI(TAG_MEM, "  Type: %d", partition->type);
+        ESP_LOGI(TAG_MEM, "  Subtype: %d", partition->subtype);
+       
+        // ESP_LOGI(TAG_MEM, "  Address (Start): 0x%lu", partition->address);
+        // ESP_LOGI(TAG_MEM, "  Size: %ld bytes", partition->size);
+        // ESP_LOGI(TAG_MEM, "  Encrypted: %s", partition->encrypted ? "Yes" : "No");
+    } else {
+        ESP_LOGE(TAG_MEM, "Partition is not mounted");
+    }
+}
+
+void list_files_in_directory(const char* dir_path) {
+    DIR dir;
+    FILINFO fno;
+    
+    if (f_opendir(&dir, dir_path) != FR_OK) {
+        ESP_LOGE(TAG_MEM, "Failed to open directory: %s", dir_path);
+        return;
+    }
+
+    while (f_readdir(&dir, &fno) == FR_OK && fno.fname[0] != 0) {
+        if (fno.fattrib & AM_DIR) {
+            ESP_LOGI(TAG_MEM, "Found directory: %s", fno.fname);
+        } else {
+            ESP_LOGI(TAG_MEM, "Found file: %s", fno.fname);
+        }
+    }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
 static void example_lvgl_touch_cb(lv_indev_drv_t * drv, lv_indev_data_t * data)
 {
     uint16_t touchpad_x[1] = {0};
@@ -163,7 +207,7 @@ static void example_lvgl_touch_cb(lv_indev_drv_t * drv, lv_indev_data_t * data)
         data->point.x = touchpad_x[0];
         data->point.y = touchpad_y[0];
         data->state = LV_INDEV_STATE_PR;
-        ESP_LOGI(TAG, "X=%u Y=%u", data->point.x, data->point.y);
+        ESP_LOGI(TAG_LCD, "X=%u Y=%u", data->point.x, data->point.y);
         lv_obj_t* scr = lv_line_create(lv_scr_act());
         line_points[0].x =data->point.x;
         line_points[0].y =data->point.y;
@@ -226,9 +270,39 @@ void app_main(void)
     sem_gui_ready = xSemaphoreCreateBinary();
     assert(sem_gui_ready);
 #endif
+ // Initialize NVS (if using it for configuration, not shown here)
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+    // Configuration for SPIFFS
+    esp_vfs_spiffs_conf_t conf = {
+        .base_path = "/spiffs",          // Mount point
+        .partition_label = "storages",    // Partition label from your partition table (partitions.csv)
+        .max_files = 5,                  // Max open files at a time
+        .format_if_mount_failed = false   // Don't format if mount fails
+    };
+    // Mount SPIFFS
+    ret = esp_vfs_spiffs_register(&conf);
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE(TAG_MEM, "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE(TAG_MEM, "Failed to find SPIFFS partition");
+        } else {
+            ESP_LOGE(TAG_MEM, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+        }
+        return;
+    }
 
+     // Unmount SPIFFS
+    ESP_ERROR_CHECK(esp_vfs_spiffs_unregister(conf.partition_label));
+    ESP_LOGI(TAG_MEM, "SPIFFS unmounted");
+    
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
-    ESP_LOGI(TAG, "Turn off LCD backlight");
+    ESP_LOGI(TAG_LCD, "Turn off LCD backlight");
     gpio_config_t bk_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
         .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
@@ -237,12 +311,12 @@ void app_main(void)
 #endif
     
     ESP_ERROR_CHECK(i2c_master_init());
-    ESP_LOGI(TAG, "I2C initialized successfully");
+    ESP_LOGI(TAG_LCD, "I2C initialized successfully");
     
     esp_lcd_touch_handle_t tp = NULL;
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
     esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
-    ESP_LOGI(TAG, "Initialize touch IO (I2C)");
+    ESP_LOGI(TAG_LCD, "Initialize touch IO (I2C)");
     /* Touch IO handle */
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)I2C_MASTER_NUM, &tp_io_config, &tp_io_handle));
     esp_lcd_touch_config_t tp_cfg = {
@@ -257,20 +331,20 @@ void app_main(void)
         },
     };
     /* Initialize touch */
-    ESP_LOGI(TAG, "Initialize touch controller GT911");
+    ESP_LOGI(TAG_LCD, "Initialize touch controller GT911");
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &tp));
 
-    int ret;
+    // int ret;
     uint8_t write_buf = 0x01;
 
     ret = i2c_master_write_to_device(I2C_MASTER_NUM, 0x24, &write_buf, 1, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG,"0x48 0x01 ret is %d",ret);
+    ESP_LOGI(TAG_LCD,"0x48 0x01 ret is %d",ret);
 
     write_buf = 0x0E;
     ret = i2c_master_write_to_device(I2C_MASTER_NUM, 0x38, &write_buf, 1, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG,"0x70 0x00 ret is %d",ret);
+    ESP_LOGI(TAG_LCD,"0x70 0x00 ret is %d",ret);
 
-    ESP_LOGI(TAG, "Install RGB LCD panel driver");
+    ESP_LOGI(TAG_LCD, "Install RGB LCD panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
     esp_lcd_rgb_panel_config_t panel_config = {
         .data_width = 16, // RGB565 in parallel mode, thus 16bit in width
@@ -320,13 +394,13 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
 
-    ESP_LOGI(TAG, "Register event callbacks");
+    ESP_LOGI(TAG_LCD, "Register event callbacks");
     esp_lcd_rgb_panel_event_callbacks_t cbs = {
         .on_vsync = example_on_vsync_event,
     };
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &cbs, &disp_drv));
 
-    ESP_LOGI(TAG, "Initialize RGB LCD panel");
+    ESP_LOGI(TAG_LCD, "Initialize RGB LCD panel");
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
 
@@ -335,7 +409,7 @@ void app_main(void)
     gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
 #endif
 
-    ESP_LOGI(TAG, "Initialize LVGL library");
+    ESP_LOGI(TAG_LCD, "Initialize LVGL library");
     lv_init();
     void *buf1 = NULL;
     void *buf2 = NULL;
@@ -345,7 +419,7 @@ void app_main(void)
     // initialize LVGL draw buffers
     lv_disp_draw_buf_init(&disp_buf, buf1, buf2, EXAMPLE_LCD_H_RES * EXAMPLE_LCD_V_RES);
 #else
-    ESP_LOGI(TAG, "Allocate separate LVGL draw buffers from PSRAM");
+    ESP_LOGI(TAG_LCD, "Allocate separate LVGL draw buffers from PSRAM");
     buf1 = heap_caps_malloc(EXAMPLE_LCD_H_RES * 160 * sizeof(lv_color_t), MALLOC_CAP_DMA);
     assert(buf1);
     // buf2 = heap_caps_malloc(EXAMPLE_LCD_H_RES * 80 * sizeof(lv_color_t), MALLOC_CAP_DMA);
@@ -354,7 +428,7 @@ void app_main(void)
     lv_disp_draw_buf_init(&disp_buf, buf1, buf2, EXAMPLE_LCD_H_RES * 160 );
 #endif // CONFIG_EXAMPLE_DOUBLE_FB
 
-    ESP_LOGI(TAG, "Register display driver to LVGL");
+    ESP_LOGI(TAG_LCD, "Register display driver to LVGL");
     lv_disp_drv_init(&disp_drv);
     disp_drv.hor_res = EXAMPLE_LCD_H_RES;
     disp_drv.ver_res = EXAMPLE_LCD_V_RES;
@@ -367,7 +441,7 @@ void app_main(void)
 #endif
     lv_disp_t *disp = lv_disp_drv_register(&disp_drv);
 
-    ESP_LOGI(TAG, "Install LVGL tick timer");
+    ESP_LOGI(TAG_LCD, "Install LVGL tick timer");
     // Tick interface for LVGL (using esp_timer to generate 2ms periodic event)
     const esp_timer_create_args_t lvgl_tick_timer_args = {
         .callback = &example_increase_lvgl_tick,
@@ -375,7 +449,7 @@ void app_main(void)
     };
 
 
-    ESP_LOGI(TAG,"Register display indev to LVGL");
+    ESP_LOGI(TAG_LCD,"Register display indev to LVGL");
     lv_indev_drv_t indev_drv;
     lv_indev_drv_init ( &indev_drv );
     indev_drv.type = LV_INDEV_TYPE_POINTER;
@@ -389,15 +463,16 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000));
 
-    ESP_LOGI(TAG, "Display LVGL Scatter Chart");
+    ESP_LOGI(TAG_LCD, "Display LVGL Scatter Chart");
     // ESP_LOGI(TAG, "Display LVGL Scatter Chart");
     // example_lvgl_demo_ui(disp);
     scr = lv_disp_get_scr_act(disp);
     // lv_obj_set_style_bg_color(scr, lv_color_white() , 0);
     // scene_act=1;
     // scene_next_task_cb(NULL);
-    lv_example_qrcode_1();
     lv_example_png_1();
+    lv_example_qrcode_1();
+    
     while (1) {
         // raise the task priority of LVGL and/or reduce the handler period can improve the performance
         vTaskDelay(pdMS_TO_TICKS(10));
