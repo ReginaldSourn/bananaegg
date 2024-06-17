@@ -1,10 +1,14 @@
 {
     "files.associations": {
-        "stat.h": "c"
+        "stat.h": "c",
+        "lv_examples.h": "c",
+        "lv_example_libs.h": "c",
+        "lv_example_png.h": "c"
     },
     "idf.adapterTargetName": "esp32s3",
     "idf.openOcdConfigs": [
-        "board/esp32s3-bridge.cfg"
+        "interface/ftdi/esp32_devkitj_v1.cfg",
+        "target/esp32s3.cfg"
     ],
     "idf.port": "/dev/ttyACM0",
     "idf.flashType": "UART"

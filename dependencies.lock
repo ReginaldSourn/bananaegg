@@ -2,20 +2,26 @@ dependencies:
   espressif__esp_lcd_touch:
     component_hash: null
     source:
-      path: /home/banana/workspace/Project/bananaegg/components/espressif__esp_lcd_touch
+      path: /home/alpha/Documents/Project/qr_code_prototype_hardware/code_/Demo_Program/bananaegg/components/espressif__esp_lcd_touch
       type: local
     version: 1.0.1
   idf:
     component_hash: null
     source:
       type: idf
-    version: 5.3.0
+    version: 5.1.1
+  joltwallet/littlefs:
+    component_hash: 8373229a6c63ccc08747117cd937b35de5721ba49468e4ca29dad006235e655e
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.14.5
   lvgl__lvgl:
     component_hash: null
     source:
-      path: /home/banana/workspace/Project/bananaegg/components/lvgl__lvgl
+      path: /home/alpha/Documents/Project/qr_code_prototype_hardware/code_/Demo_Program/bananaegg/components/lvgl__lvgl
       type: local
     version: 8.4.0
-manifest_hash: 3ad80944b3da319dc13312749c34c2d78c42fe9f9e0e812bef8dd11c12f49b42
+manifest_hash: 026e718555b0fd1b32a6de70e9021683541179e219a6a93e7c46c328e130915a
 target: esp32s3
 version: 1.0.0

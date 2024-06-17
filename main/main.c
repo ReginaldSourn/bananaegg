@@ -32,6 +32,9 @@
 #include "esp_partition.h"
 #include "ff.h"
 #include <dirent.h>
+// #include "duck.h"
+#include "khqr.h"
+#include "dollar.h"
 #define EXAMPLE_MAX_CHAR_SIZE    64
 
 #define MOUNT_POINT "/sdcard"
@@ -59,7 +62,7 @@ uint8_t sd_flag = 0;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (19 * 1000 * 1000)
+#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (17 * 1000 * 1000)
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 #define EXAMPLE_PIN_NUM_BK_LIGHT       -1
@@ -278,28 +281,28 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
     // Configuration for SPIFFS
-    esp_vfs_spiffs_conf_t conf = {
-        .base_path = "/spiffs",          // Mount point
-        .partition_label = "storages",    // Partition label from your partition table (partitions.csv)
-        .max_files = 5,                  // Max open files at a time
-        .format_if_mount_failed = false   // Don't format if mount fails
-    };
+    // esp_vfs_spiffs_conf_t conf = {
+    //     .base_path = "/spiffs",          // Mount point
+    //     .partition_label = "storages",    // Partition label from your partition table (partitions.csv)
+    //     .max_files = 5,                  // Max open files at a time
+    //     .format_if_mount_failed = false   // Don't format if mount fails
+    // };
     // Mount SPIFFS
-    ret = esp_vfs_spiffs_register(&conf);
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE(TAG_MEM, "Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            ESP_LOGE(TAG_MEM, "Failed to find SPIFFS partition");
-        } else {
-            ESP_LOGE(TAG_MEM, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-        }
-        return;
-    }
+    // ret = esp_vfs_spiffs_register(&conf);
+    // if (ret != ESP_OK) {
+    //     if (ret == ESP_FAIL) {
+    //         ESP_LOGE(TAG_MEM, "Failed to mount or format filesystem");
+    //     } else if (ret == ESP_ERR_NOT_FOUND) {
+    //         ESP_LOGE(TAG_MEM, "Failed to find SPIFFS partition");
+    //     } else {
+    //         ESP_LOGE(TAG_MEM, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+    //     }
+    //     return;
+    // }
 
      // Unmount SPIFFS
-    ESP_ERROR_CHECK(esp_vfs_spiffs_unregister(conf.partition_label));
-    ESP_LOGI(TAG_MEM, "SPIFFS unmounted");
+    // ESP_ERROR_CHECK(esp_vfs_spiffs_unregister(conf.partition_label));
+    // ESP_LOGI(TAG_MEM, "SPIFFS unmounted");
     
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
     ESP_LOGI(TAG_LCD, "Turn off LCD backlight");
@@ -440,14 +443,16 @@ void app_main(void)
     disp_drv.full_refresh = true; // the full_refresh mode can maintain the synchronization between the two frame buffers
 #endif
     lv_disp_t *disp = lv_disp_drv_register(&disp_drv);
-
+    
+    
+    
     ESP_LOGI(TAG_LCD, "Install LVGL tick timer");
     // Tick interface for LVGL (using esp_timer to generate 2ms periodic event)
     const esp_timer_create_args_t lvgl_tick_timer_args = {
         .callback = &example_increase_lvgl_tick,
         .name = "lvgl_tick"
     };
-
+    
 
     ESP_LOGI(TAG_LCD,"Register display indev to LVGL");
     lv_indev_drv_t indev_drv;
@@ -457,21 +462,52 @@ void app_main(void)
     indev_drv.read_cb = example_touchpad_read;
     indev_drv.user_data = tp;
     lv_indev_drv_register( &indev_drv );
-
+    
 
     esp_timer_handle_t lvgl_tick_timer = NULL;
     ESP_ERROR_CHECK(esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000));
-
+    
     ESP_LOGI(TAG_LCD, "Display LVGL Scatter Chart");
     // ESP_LOGI(TAG, "Display LVGL Scatter Chart");
     // example_lvgl_demo_ui(disp);
     scr = lv_disp_get_scr_act(disp);
-    // lv_obj_set_style_bg_color(scr, lv_color_white() , 0);
+    lv_obj_set_style_bg_color(scr, lv_color_white() , 0);
+    LV_IMG_DECLARE(khqr);
+    LV_IMG_DECLARE(dollar);
     // scene_act=1;
     // scene_next_task_cb(NULL);
-    lv_example_png_1();
-    lv_example_qrcode_1();
+    lv_obj_t * img1;
+    lv_obj_t * img2;
+    lv_obj_t * t_name;
+    img1 = lv_img_create(lv_scr_act());
+    lv_style_t style_rotated;
+lv_style_init(&style_rotated);
+lv_style_set_transform_angle(&style_rotated, 2700);
+    lv_img_set_src(img1, &khqr);
+     ESP_LOGI(TAG_LCD, "Displayed Image PNG");
+        lv_obj_align(img1, LV_ALIGN_CENTER, 0, 0);
+        // lv_obj_set_style_transform_angle(img1, 0, LV_PART_MAIN);  
+        lv_img_set_angle(img1, 2700);
+        lv_example_qrcode_1();
+    t_name = lv_label_create(lv_scr_act());
+    lv_label_set_text(t_name, "Brilliant Phal");
+    lv_obj_set_style_transform_angle(t_name,2700,1);
+    // lv_obj_set_style_transform_angle(t_name, , LV_PART_MAIN);
+    // lv_obj_align(t_name, LV_ALIGN_CENTER, -100, 90);
+    // lv_obj_add_style(t_name,&style_rotated, 1);
+    // lv_obj_set_style_transform_angle
+    
+    // lv_obj_set_style_transform_angle(t_name, 2700, LV_PART_MAIN);
+    img2 = lv_img_create(lv_scr_act());
+    lv_img_set_src(img2, &dollar);
+    lv_obj_align(img2, LV_ALIGN_CENTER, 90, 0);
+    lv_img_set_angle(img2, 2700);
+    
+    // lv_example_png_1();
+    // img = lv_img_create(lv_scr_act());
+    
+
     
     while (1) {
         // raise the task priority of LVGL and/or reduce the handler period can improve the performance
