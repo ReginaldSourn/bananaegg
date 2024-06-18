@@ -21,7 +21,7 @@ dependencies:
     source:
       path: /home/alpha/Documents/Project/qr_code_prototype_hardware/code_/Demo_Program/bananaegg/components/lvgl__lvgl
       type: local
-    version: 8.4.0
-manifest_hash: 026e718555b0fd1b32a6de70e9021683541179e219a6a93e7c46c328e130915a
+    version: 8.2.0
+manifest_hash: 03214dc35034fd1fb5a8fe10468b2bc8bff1ec5564c6d0619ff33379fb427e0b
 target: esp32s3
 version: 1.0.0

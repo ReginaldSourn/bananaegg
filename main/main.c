@@ -17,7 +17,7 @@
 #include "esp_log.h"
 #include "lvgl.h"
 #include "examples/libs/qrcode/lv_example_qrcode.h"
-#include "examples/libs/png/lv_example_png.h"
+#include "examples/libs/png/lv_example_png_1.c"
 #include "driver/i2c.h"
 #include "esp_lcd_touch_gt911.h"
 
@@ -33,8 +33,8 @@
 #include "ff.h"
 #include <dirent.h>
 // #include "duck.h"
-#include "khqr.h"
-#include "dollar.h"
+// #include "khqr.h"
+// #include "dollar.h"
 #define EXAMPLE_MAX_CHAR_SIZE    64
 
 #define MOUNT_POINT "/sdcard"
@@ -435,24 +435,27 @@ void app_main(void)
     lv_disp_drv_init(&disp_drv);
     disp_drv.hor_res = EXAMPLE_LCD_H_RES;
     disp_drv.ver_res = EXAMPLE_LCD_V_RES;
+    disp_drv.full_refresh = true;
+    disp_drv.sw_rotate = 1;
+    disp_drv.rotated = LV_DISP_ROT_90;
+	
     disp_drv.flush_cb = example_lvgl_flush_cb;
     disp_drv.draw_buf = &disp_buf;
     disp_drv.user_data = panel_handle;
     
-#if CONFIG_EXAMPLE_DOUBLE_FB
-    disp_drv.full_refresh = true; // the full_refresh mode can maintain the synchronization between the two frame buffers
-#endif
+    // disp_drv.sw_rotate = 0;
+   
+
     lv_disp_t *disp = lv_disp_drv_register(&disp_drv);
     
-    
-    
+
     ESP_LOGI(TAG_LCD, "Install LVGL tick timer");
     // Tick interface for LVGL (using esp_timer to generate 2ms periodic event)
     const esp_timer_create_args_t lvgl_tick_timer_args = {
         .callback = &example_increase_lvgl_tick,
         .name = "lvgl_tick"
     };
-    
+   
 
     ESP_LOGI(TAG_LCD,"Register display indev to LVGL");
     lv_indev_drv_t indev_drv;
@@ -469,30 +472,49 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000));
     
     ESP_LOGI(TAG_LCD, "Display LVGL Scatter Chart");
-    // ESP_LOGI(TAG, "Display LVGL Scatter Chart");
-    // example_lvgl_demo_ui(disp);
+   
     scr = lv_disp_get_scr_act(disp);
     lv_obj_set_style_bg_color(scr, lv_color_white() , 0);
     LV_IMG_DECLARE(khqr);
     LV_IMG_DECLARE(dollar);
-    // scene_act=1;
-    // scene_next_task_cb(NULL);
+    LV_IMG_DECLARE(aba_pay);
     lv_obj_t * img1;
     lv_obj_t * img2;
+    lv_obj_t * bank_img;
     lv_obj_t * t_name;
+    lv_obj_t * t_price;
     img1 = lv_img_create(lv_scr_act());
-    lv_style_t style_rotated;
-lv_style_init(&style_rotated);
-lv_style_set_transform_angle(&style_rotated, 2700);
+    lv_style_t style_t_name;
+    lv_style_init(&style_t_name);
+    lv_style_t style_t_price;
+    lv_style_init(&style_t_price);
     lv_img_set_src(img1, &khqr);
      ESP_LOGI(TAG_LCD, "Displayed Image PNG");
-        lv_obj_align(img1, LV_ALIGN_CENTER, 0, 0);
-        // lv_obj_set_style_transform_angle(img1, 0, LV_PART_MAIN);  
-        lv_img_set_angle(img1, 2700);
+        lv_obj_align(img1, LV_ALIGN_CENTER, 0, 30);
+        
         lv_example_qrcode_1();
+    bank_img = lv_img_create(lv_scr_act());
+    lv_img_set_src(bank_img, &aba_pay);
+
+        lv_obj_align(bank_img, LV_ALIGN_CENTER, 0, -310);
+       
     t_name = lv_label_create(lv_scr_act());
-    lv_label_set_text(t_name, "Brilliant Phal");
-    lv_obj_set_style_transform_angle(t_name,2700,1);
+    lv_label_set_text(t_name, "Rithy SOURN");
+    lv_style_set_text_font(&style_t_name, &lv_font_montserrat_22); 
+
+    // lv_style_set_text_font(&style_t_name, LV_FONT_DEFAULT);
+// Apply the style to the label
+    
+   
+    t_price = lv_label_create(lv_scr_act());
+    lv_label_set_text(t_price, "$ 0");
+    lv_style_set_text_font(&style_t_price, &lv_font_montserrat_40);
+    lv_obj_add_style(t_name, &style_t_name, 0);
+    lv_obj_align(t_name, LV_ALIGN_CENTER, -70, -135);
+    lv_obj_add_style(t_price, &style_t_price, 0);
+    lv_obj_align(t_price, LV_ALIGN_CENTER, -115, -90);
+    ESP_LOGI(TAG_LCD,"Text state  %d", lv_obj_get_state(t_name));
+    ESP_LOGI(TAG_LCD, "Text translate %d %d", lv_obj_get_x(img1),lv_obj_get_y (img1));
     // lv_obj_set_style_transform_angle(t_name, , LV_PART_MAIN);
     // lv_obj_align(t_name, LV_ALIGN_CENTER, -100, 90);
     // lv_obj_add_style(t_name,&style_rotated, 1);
@@ -501,8 +523,8 @@ lv_style_set_transform_angle(&style_rotated, 2700);
     // lv_obj_set_style_transform_angle(t_name, 2700, LV_PART_MAIN);
     img2 = lv_img_create(lv_scr_act());
     lv_img_set_src(img2, &dollar);
-    lv_obj_align(img2, LV_ALIGN_CENTER, 90, 0);
-    lv_img_set_angle(img2, 2700);
+    lv_obj_align(img2, LV_ALIGN_CENTER, 0, 120);
+    // lv_img_set_angle(img2, 2700);
     
     // lv_example_png_1();
     // img = lv_img_create(lv_scr_act());
