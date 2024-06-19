@@ -46,8 +46,8 @@
 #define PIN_NUM_CLK   12
 #define PIN_NUM_CS    -1
 
-#define I2C_MASTER_SCL_IO           9       /*!< GPIO number used for I2C master clock */
-#define I2C_MASTER_SDA_IO           8       /*!< GPIO number used for I2C master data  */
+#define I2C_MASTER_SCL_IO           GPIO_NUM_41       /*!< GPIO number used for I2C master clock */
+#define I2C_MASTER_SDA_IO           GPIO_NUM_42          /*!< GPIO number used for I2C master data  */
 #define I2C_MASTER_NUM              0       /*!< I2C master i2c port number, the number of i2c peripheral interfaces available will depend on the chip */
 #define I2C_MASTER_FREQ_HZ          400000                     /*!< I2C master clock frequency */
 #define I2C_MASTER_TX_BUF_DISABLE   0                          /*!< I2C master doesn't need buffer */
@@ -63,34 +63,34 @@ uint8_t sd_flag = 0;
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (17 * 1000 * 1000)
-#define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  1
+#define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  -1
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
-#define EXAMPLE_PIN_NUM_BK_LIGHT       -1
-#define EXAMPLE_PIN_NUM_HSYNC          46
-#define EXAMPLE_PIN_NUM_VSYNC          3
-#define EXAMPLE_PIN_NUM_DE             5
-#define EXAMPLE_PIN_NUM_PCLK           7
-#define EXAMPLE_PIN_NUM_DATA0          14 // B3
-#define EXAMPLE_PIN_NUM_DATA1          38 // B4
-#define EXAMPLE_PIN_NUM_DATA2          18 // B5
-#define EXAMPLE_PIN_NUM_DATA3          17 // B6
-#define EXAMPLE_PIN_NUM_DATA4          10 // B7
-#define EXAMPLE_PIN_NUM_DATA5          39 // G2
-#define EXAMPLE_PIN_NUM_DATA6          0 // G3
-#define EXAMPLE_PIN_NUM_DATA7          45 // G4
-#define EXAMPLE_PIN_NUM_DATA8          48 // G5
-#define EXAMPLE_PIN_NUM_DATA9          47 // G6
-#define EXAMPLE_PIN_NUM_DATA10         21 // G7
-#define EXAMPLE_PIN_NUM_DATA11         1  // R3
-#define EXAMPLE_PIN_NUM_DATA12         2  // R4
-#define EXAMPLE_PIN_NUM_DATA13         42 // R5
-#define EXAMPLE_PIN_NUM_DATA14         41 // R6
-#define EXAMPLE_PIN_NUM_DATA15         40 // R7
+#define EXAMPLE_PIN_NUM_BK_LIGHT       GPIO_NUM_1
+#define EXAMPLE_PIN_NUM_HSYNC          GPIO_NUM_4
+#define EXAMPLE_PIN_NUM_VSYNC          GPIO_NUM_2
+#define EXAMPLE_PIN_NUM_DE             GPIO_NUM_5
+#define EXAMPLE_PIN_NUM_PCLK           GPIO_NUM_6
+#define EXAMPLE_PIN_NUM_DATA0          GPIO_NUM_7 // B3
+#define EXAMPLE_PIN_NUM_DATA1          GPIO_NUM_15 // B4
+#define EXAMPLE_PIN_NUM_DATA2          GPIO_NUM_16 // B5
+#define EXAMPLE_PIN_NUM_DATA3          GPIO_NUM_8 // B6
+#define EXAMPLE_PIN_NUM_DATA4          GPIO_NUM_3 // B7
+#define EXAMPLE_PIN_NUM_DATA5          GPIO_NUM_46 // G2
+#define EXAMPLE_PIN_NUM_DATA6          GPIO_NUM_9 // G3
+#define EXAMPLE_PIN_NUM_DATA7          GPIO_NUM_10 // G4
+#define EXAMPLE_PIN_NUM_DATA8          GPIO_NUM_11 // G5
+#define EXAMPLE_PIN_NUM_DATA9          GPIO_NUM_12 // G6
+#define EXAMPLE_PIN_NUM_DATA10         GPIO_NUM_13 // G7
+#define EXAMPLE_PIN_NUM_DATA11         GPIO_NUM_14  // R3
+#define EXAMPLE_PIN_NUM_DATA12         GPIO_NUM_21  // R4
+#define EXAMPLE_PIN_NUM_DATA13         GPIO_NUM_47 // R5
+#define EXAMPLE_PIN_NUM_DATA14         GPIO_NUM_48 // R6
+#define EXAMPLE_PIN_NUM_DATA15         GPIO_NUM_45 // R7
 #define EXAMPLE_PIN_NUM_DISP_EN        -1
 #define ESP_VFS_PATH_MAX             10
 // The pixel number in horizontal and vertical
-#define EXAMPLE_LCD_H_RES              800
-#define EXAMPLE_LCD_V_RES              480
+#define EXAMPLE_LCD_V_RES              856
+#define EXAMPLE_LCD_H_RES              480
 
 #if CONFIG_EXAMPLE_DOUBLE_FB
 #define EXAMPLE_LCD_NUM_FB             2
@@ -109,7 +109,7 @@ static int32_t scene_act = -1;
 // static lv_obj_t * scene_bg;
 static lv_style_t style_common;
 static lv_obj_t *scr;
-extern void example_lvgl_demo_ui(lv_disp_t *disp);
+
 
 /**
  * @brief i2c master initialization
@@ -187,6 +187,17 @@ void list_files_in_directory(const char* dir_path) {
         } else {
             ESP_LOGI(TAG_MEM, "Found file: %s", fno.fname);
         }
+    }
+}
+static void event_handler(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if(code == LV_EVENT_CLICKED) {
+        ESP_LOGI(TAG_LCD, "Clicked");
+    }
+    else if(code == LV_EVENT_VALUE_CHANGED) {
+        ESP_LOGI(TAG_LCD,"Toggled");
     }
 }
 
@@ -386,11 +397,11 @@ void app_main(void)
             .v_res = EXAMPLE_LCD_V_RES,
             // The following parameters should refer to LCD spec
             .hsync_back_porch = 30,
-            .hsync_front_porch = 210,
-            .hsync_pulse_width = 30,
-            .vsync_back_porch = 4,
-            .vsync_front_porch = 4,
-            .vsync_pulse_width = 4,
+            .hsync_front_porch = 12,
+            .hsync_pulse_width = 6,
+            .vsync_back_porch = 30,
+            .vsync_front_porch = 12,
+            .vsync_pulse_width = 1,
             .flags.pclk_active_neg = true,
         },
         .flags.fb_in_psram = true, // allocate frame buffer in PSRAM
@@ -408,7 +419,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
 
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
-    ESP_LOGI(TAG, "Turn on LCD backlight");
+    ESP_LOGI(TAG_LCD, "Turn on LCD backlight");
     gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
 #endif
 
@@ -436,8 +447,8 @@ void app_main(void)
     disp_drv.hor_res = EXAMPLE_LCD_H_RES;
     disp_drv.ver_res = EXAMPLE_LCD_V_RES;
     disp_drv.full_refresh = true;
-    disp_drv.sw_rotate = 1;
-    disp_drv.rotated = LV_DISP_ROT_90;
+    // disp_drv.sw_rotate = 1;
+    // disp_drv.rotated = LV_DISP_ROT_90;
 	
     disp_drv.flush_cb = example_lvgl_flush_cb;
     disp_drv.draw_buf = &disp_buf;
@@ -483,21 +494,32 @@ void app_main(void)
     lv_obj_t * bank_img;
     lv_obj_t * t_name;
     lv_obj_t * t_price;
+    // Button menu
+    lv_obj_t * b_listbank;
+    lv_obj_t * b_qrwifi;
+    lv_obj_t * b_foodmenu;
+    lv_obj_t * b_setting;
+    // label menu
+    lv_obj_t * label_lb;
+    lv_obj_t * label_qrwifi;
+    lv_obj_t * label_foodmenu;
+    lv_obj_t * label_setting;
+   
     img1 = lv_img_create(lv_scr_act());
     lv_style_t style_t_name;
     lv_style_init(&style_t_name);
     lv_style_t style_t_price;
     lv_style_init(&style_t_price);
     lv_img_set_src(img1, &khqr);
-     ESP_LOGI(TAG_LCD, "Displayed Image PNG");
-        lv_obj_align(img1, LV_ALIGN_CENTER, 0, 30);
+    ESP_LOGI(TAG_LCD, "Displayed Image PNG");
+    lv_obj_align(img1, LV_ALIGN_CENTER, 0, 30);
         
         lv_example_qrcode_1();
     bank_img = lv_img_create(lv_scr_act());
     lv_img_set_src(bank_img, &aba_pay);
 
-        lv_obj_align(bank_img, LV_ALIGN_CENTER, 0, -310);
-       
+    lv_obj_align(bank_img, LV_ALIGN_CENTER, 0, -310);
+    
     t_name = lv_label_create(lv_scr_act());
     lv_label_set_text(t_name, "Rithy SOURN");
     lv_style_set_text_font(&style_t_name, &lv_font_montserrat_22); 
@@ -528,8 +550,123 @@ void app_main(void)
     
     // lv_example_png_1();
     // img = lv_img_create(lv_scr_act());
+    // label style here 
+    lv_style_t style_label_normal;   // Normal state
+    lv_style_t style_label_checked;  // Checked state
+
+    lv_style_init(&style_label_normal);
+    lv_style_init(&style_label_checked);
+    lv_style_set_text_font(&style_label_normal, &lv_font_montserrat_24);
+    // Set label text colors for better contrast in both states
+    lv_style_set_text_color(&style_label_normal, lv_color_hex(0x0));  // Orange-red when unchecked
+    lv_style_set_text_color(&style_label_checked, lv_color_hex(0xFFFFFF)); 
+    // Button Here
+    // Button Menu Style 
+   
+    
+    lv_style_t style_btn_menu;         // Style for the button
+    lv_style_t style_btn_menu_tgl;    // Style for the toggled state
+
+    // Initialize the button styles
+    lv_style_init(&style_btn_menu);
+    lv_style_init(&style_btn_menu_tgl);
+
+    // --- Button Style (Normal State) ---
+    lv_style_set_min_height(&style_btn_menu, 70);  // Set height
+    lv_style_set_width(&style_btn_menu, 121);         // Set width
+           
+    lv_style_set_bg_opa(&style_btn_menu, LV_OPA_TRANSP); // No background initially
+    lv_style_set_border_width(&style_btn_menu, 2);     // Add a border (stroke)
+    lv_style_set_border_color(&style_btn_menu, lv_color_hex(0xCBA02D)); // Set border color
+    lv_style_set_radius(&style_btn_menu, 0);
+    // --- Button Style (Toggled State) ---
+    lv_style_set_bg_opa(&style_btn_menu_tgl, LV_OPA_COVER);   // Solid background when toggled
+    lv_style_set_bg_color(&style_btn_menu_tgl, lv_color_hex(0xCBA02D));
+    lv_style_set_radius(&style_btn_menu_tgl, 0);
+    // List Bank Button 
+    b_listbank = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_listbank, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_listbank, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_listbank, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_listbank, LV_ALIGN_BOTTOM_LEFT, 0, -2);
+    lv_obj_add_flag(b_listbank, LV_OBJ_FLAG_CHECKABLE);
+    // Label
+    label_lb = lv_label_create(b_listbank);
+    lv_obj_center(label_lb);
+    // Create styles for the label
+           // White when checked
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_lb, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_lb, &style_label_checked, LV_STATE_CHECKED);
+    
+    lv_label_set_text(label_lb, LV_SYMBOL_LIST);
+    lv_obj_add_flag(label_lb, LV_OBJ_FLAG_CHECKABLE);
+    // WIFI QR Button 
+    b_qrwifi = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_qrwifi, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_qrwifi, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_qrwifi, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_qrwifi, LV_ALIGN_BOTTOM_LEFT, 120, -2);
+    lv_obj_add_flag(b_qrwifi, LV_OBJ_FLAG_CHECKABLE);
+    // Label Qr wifi
+    label_qrwifi = lv_label_create(b_qrwifi);
+    lv_obj_center(label_qrwifi);
+    // Create styles for the label
+           // White when checked
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_qrwifi, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_qrwifi, &style_label_checked, b_qrwifi);
+    lv_label_set_text(label_qrwifi, LV_SYMBOL_WIFI);
+
+    // Foood Menu Button 
+    b_foodmenu = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_foodmenu, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_foodmenu, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_foodmenu, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_foodmenu, LV_ALIGN_BOTTOM_LEFT, 240, -2);
+    lv_obj_add_flag(b_foodmenu, LV_OBJ_FLAG_CHECKABLE);
+    // Label Qr wifi
+    label_foodmenu = lv_label_create(b_foodmenu);
+    lv_obj_center(label_foodmenu);
+    // Create styles for the label
+           // White when checked
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_foodmenu, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_foodmenu, &style_label_checked, b_foodmenu);
+    lv_label_set_text(label_foodmenu, LV_SYMBOL_EDIT);
+
+    // Setting  Button 
+    b_setting = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_setting, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_setting, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_setting, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_setting, LV_ALIGN_BOTTOM_LEFT, 359, -2);
+    lv_obj_add_flag(b_setting, LV_OBJ_FLAG_CHECKABLE);
+    // Label Qr wifi
+    label_setting = lv_label_create(b_setting);
+    lv_obj_center(label_setting);
+    // Create styles for the label
+           // White when checked
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_setting, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_setting, &style_label_checked, b_setting);
+    lv_label_set_text(label_setting, LV_SYMBOL_SETTINGS);
+
+    
+    
+    
+    
     
 
+    
     
     while (1) {
         // raise the task priority of LVGL and/or reduce the handler period can improve the performance
