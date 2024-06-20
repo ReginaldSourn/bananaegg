@@ -4,7 +4,7 @@
 /**
  * Create a QR Code
  */
-void lv_example_qrcode_1(void)
+void lv_example_qrcode_1(void )
 {
    lv_color_t bg_color = lv_color_white();
     lv_color_t fg_color = lv_palette_darken(0, 0);

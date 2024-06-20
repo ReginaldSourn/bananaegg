@@ -16,8 +16,8 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "lvgl.h"
-#include "examples/libs/qrcode/lv_example_qrcode.h"
-#include "examples/libs/png/lv_example_png_1.c"
+#include "examples/lv_examples.h"
+
 #include "driver/i2c.h"
 #include "esp_lcd_touch_gt911.h"
 
@@ -54,10 +54,11 @@
 #define I2C_MASTER_RX_BUF_DISABLE   0                          /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_TIMEOUT_MS       1000
 #define STORAGE_PARTITION_LABEL "storage"
-
+#define LV_USE_QRCODE
 static const char *TAG_LCD = "LCD";
 static const char *TAG_MEM = "FlashLog";
 uint8_t sd_flag = 0;
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
@@ -109,6 +110,53 @@ static int32_t scene_act = -1;
 // static lv_obj_t * scene_bg;
 static lv_style_t style_common;
 static lv_obj_t *scr;
+
+// user declarations 
+//
+
+
+// LV  OBJECT 
+LV_IMG_DECLARE(khqr);
+    LV_IMG_DECLARE(dollar);
+    LV_IMG_DECLARE(aba_pay);
+    LV_IMG_DECLARE(acleda_white);
+    lv_obj_t * qr;
+    // QR Devices
+    static lv_obj_t * img1;
+    static lv_obj_t * img2;
+    static lv_obj_t * bank_img_disp;
+    static lv_obj_t * bank_img_hide;
+    static lv_obj_t * t_name;
+    static lv_obj_t * t_price;
+    // Button menu
+    static lv_obj_t * b_listbank;
+    static lv_obj_t * b_qrwifi;
+    static lv_obj_t * b_foodmenu;
+    static lv_obj_t * b_setting;
+    static lv_obj_t * b_home;
+    // label menu
+    static lv_obj_t * label_lb;
+    static lv_obj_t * label_qrwifi;
+    static lv_obj_t * label_foodmenu;
+    static lv_obj_t * label_setting;
+    static lv_obj_t * label_home;
+
+// Style 
+    static lv_style_t  style_btn_menu;         // Style for the button
+    static lv_style_t  style_btn_menu_tgl;    // Style for the toggled state
+    static lv_style_t  style_label_normal;   // Normal state
+    static lv_style_t  style_label_checked;  // Checked state
+    static lv_color_t qr_bg_color;
+    static lv_color_t qr_fg_color;
+//
+static const char* qrString[] = {
+    "00020101021229360009khqr@aclb01090125202660206ACLEDA392000118551976679401014520420005303840540510.005802KH5911SOURN RITHY6010PHNOM PENH6213020901252026663046A5E", 
+    "00020101021229450016abaakhppxxx@abaa01090002118870208ABA Bank40390006abaP2P011224D93FFFC1710209000211887520400005303840540410.05802KH5911Rithy SOURN6010Phnom Penh6304EA02",
+     // Optional: Null terminator for easy iteration
+};
+static bool state_swipe = 0;
+
+///
 
 
 /**
@@ -202,6 +250,85 @@ static void event_handler(lv_event_t * e)
 }
 
 
+static void qrcode_display(char* qrstring){
+    qr_bg_color = lv_color_white();
+    qr_fg_color = lv_palette_darken(0, 0);
+    qr = lv_qrcode_create(lv_scr_act(), 300, qr_fg_color, qr_bg_color);
+    
+    /*Set data*/
+    
+    lv_qrcode_update(qr, qrstring, strlen(qrstring));
+    
+    // lv_obj_set_style_transform_angle(qr,2700, 0);
+    lv_obj_align(qr, LV_ALIGN_CENTER, 0, 120);
+    /*Add a border with bg_color*/
+    lv_obj_set_style_border_color(qr, qr_bg_color, 0);
+    lv_obj_set_style_border_width(qr, 5, 0);
+}
+////////////////////////////////////////////////////////////////////////////////
+// Callback function for gesture events
+static void swipeable_obj_event_cb(lv_event_t * e) {
+    lv_obj_t * obj = lv_event_get_target(e);
+
+    if (lv_event_get_code(e) == LV_EVENT_GESTURE) {
+        lv_indev_t * indev = lv_indev_get_act();
+        ESP_LOGI(TAG_LCD, "HAVE EVENT");
+        if (indev) {
+            lv_dir_t dir = lv_indev_get_gesture_dir(indev);
+
+            // Determine swipe direction and animate
+            if ((dir == LV_DIR_LEFT) && (state_swipe == 0)) {
+                ESP_LOGI(TAG_LCD, "Swiped left");  // Add logging to see if the callback is triggered
+                // ... (Animation code to move left) ...
+                lv_anim_t a;
+                lv_anim_init(&a);
+                lv_anim_set_var(&a, bank_img_disp);
+                lv_anim_set_values(&a, lv_obj_get_x(bank_img_disp), -lv_obj_get_width(bank_img_disp)); 
+                lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x); // Move horizontally
+                lv_animimg_set_duration(&a, 300);  
+                lv_anim_set_ready_cb(&a, lv_obj_del_anim_ready_cb); // Delete after animation finishes
+                lv_anim_start(&a);
+                
+                lv_obj_clean(bank_img_disp);
+                // vTaskDelay(pdMS_TO_TICKS(310));
+                bank_img_hide = lv_img_create(lv_scr_act());
+                lv_img_set_src(bank_img_hide, &aba_pay);
+
+                lv_obj_align(bank_img_hide, LV_ALIGN_CENTER, 0, -310);
+                lv_qrcode_update(qr, qrString[1], strlen(qrString[1]));
+                state_swipe = 1;
+                 
+            } else if ((dir == LV_DIR_RIGHT)  && (state_swipe == 1)) {
+                ESP_LOGI(TAG_LCD, "Swiped right"); // Add logging
+                // ... (Animation code to move right) ...
+                ESP_LOGI(TAG_LCD, "Swiped left");  // Add logging to see if the callback is triggered
+                // ... (Animation code to move left) ...
+                lv_anim_t a;
+                lv_anim_init(&a);
+                lv_anim_set_var(&a, bank_img_hide);
+                lv_anim_set_values(&a, lv_obj_get_x(bank_img_hide), lv_obj_get_width(bank_img_hide)); 
+                lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x); // Move horizontally
+                lv_animimg_set_duration(&a, 300);  
+                lv_anim_set_ready_cb(&a, lv_obj_del_anim_ready_cb); // Delete after animation finishes
+                lv_anim_start(&a);
+                lv_obj_clean(bank_img_hide);
+                //  vTaskDelay(pdMS_TO_TICKS(310));
+                
+                bank_img_disp = lv_timer_create(lv_scr_act());
+                lv_img_set_src(bank_img_disp, &acleda_white);
+
+                lv_obj_align(bank_img_disp, LV_ALIGN_CENTER, 0, -310);
+                
+                 lv_qrcode_update(qr, qrString[0], strlen(qrString[0]));
+                 state_swipe = 0 ;
+            } 
+        } else {
+            ESP_LOGE("SWIPE", "Active input device not found"); // Error logging
+        }
+    }
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 
 static void example_lvgl_touch_cb(lv_indev_drv_t * drv, lv_indev_data_t * data)
@@ -272,6 +399,140 @@ static void example_increase_lvgl_tick(void *arg)
     lv_tick_inc(EXAMPLE_LVGL_TICK_PERIOD_MS);
 }
 
+// user funtions 
+static void menu_bar()
+{
+    /* Menu Display */
+   
+
+    lv_style_init(&style_label_normal);
+    lv_style_init(&style_label_checked);
+    lv_style_set_text_font(&style_label_normal, &lv_font_montserrat_24);
+    // Set label text colors for better contrast in both states
+    lv_style_set_text_color(&style_label_normal, lv_color_hex(0x0));  // Orange-red when unchecked
+    lv_style_set_text_color(&style_label_checked, lv_color_hex(0xFFFFFF)); 
+    // Button Here
+    // Button Menu Style 
+   
+    
+   
+
+    // Initialize the button styles
+    lv_style_init(&style_btn_menu);
+    lv_style_init(&style_btn_menu_tgl);
+
+    // --- Button Style (Normal State) ---
+    lv_style_set_min_height(&style_btn_menu, 70);  // Set height
+    lv_style_set_width(&style_btn_menu, 97);         // Set width
+           
+    lv_style_set_bg_opa(&style_btn_menu, LV_OPA_TRANSP); // No background initially
+    lv_style_set_border_width(&style_btn_menu, 2);     // Add a border (stroke)
+    lv_style_set_border_color(&style_btn_menu, lv_color_hex(0xCBA02D)); // Set border color
+    lv_style_set_radius(&style_btn_menu, 0);
+    // --- Button Style (Toggled State) ---
+    lv_style_set_bg_opa(&style_btn_menu_tgl, LV_OPA_COVER);   // Solid background when toggled
+    lv_style_set_bg_color(&style_btn_menu_tgl, lv_color_hex(0xCBA02D));
+    lv_style_set_radius(&style_btn_menu_tgl, 0);
+    // List Bank Button 
+    b_listbank = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_listbank, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_listbank, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_listbank, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_listbank, LV_ALIGN_BOTTOM_LEFT, 0, -2);
+    lv_obj_add_flag(b_listbank, LV_OBJ_FLAG_CHECKABLE);
+    // Label
+    label_lb = lv_label_create(b_listbank);
+    lv_obj_center(label_lb);
+    // Create styles for the label
+           // White when checked
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_lb, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_lb, &style_label_checked, LV_STATE_CHECKED);
+    
+    lv_label_set_text(label_lb, LV_SYMBOL_LIST);
+    lv_obj_add_flag(label_lb, LV_OBJ_FLAG_CHECKABLE);
+    // WIFI QR Button 
+    b_qrwifi = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_qrwifi, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_qrwifi, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_qrwifi, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_qrwifi, LV_ALIGN_BOTTOM_LEFT, 96, -2);
+    lv_obj_add_flag(b_qrwifi, LV_OBJ_FLAG_CHECKABLE);
+    // Label Qr wifi
+    label_qrwifi = lv_label_create(b_qrwifi);
+    lv_obj_center(label_qrwifi);
+    // Create styles for the label
+           // White when checked
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_qrwifi, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_qrwifi, &style_label_checked, b_qrwifi);
+    lv_label_set_text(label_qrwifi, LV_SYMBOL_WIFI);
+
+    // Home Button
+
+
+    b_home = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_home, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_home, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_home, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_home, LV_ALIGN_BOTTOM_LEFT, 192, -2);
+    lv_obj_add_flag(b_home, LV_OBJ_FLAG_CHECKABLE);
+    // Label Home
+    label_home = lv_label_create(b_home);
+    lv_obj_center(label_home);
+  
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_home, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_home, &style_label_checked, b_home);
+    lv_label_set_text(label_home, LV_SYMBOL_HOME);
+
+    // Foood Menu Button 
+    b_foodmenu = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_foodmenu, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_foodmenu, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_foodmenu, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_foodmenu, LV_ALIGN_BOTTOM_LEFT, 288, -2);
+    lv_obj_add_flag(b_foodmenu, LV_OBJ_FLAG_CHECKABLE);
+    // Label Food Menu
+    label_foodmenu = lv_label_create(b_foodmenu);
+    lv_obj_center(label_foodmenu);
+    // Create styles for the label
+           // White when checked
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_foodmenu, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_foodmenu, &style_label_checked, b_foodmenu);
+    lv_label_set_text(label_foodmenu, LV_SYMBOL_EDIT);
+
+    // Setting  Button 
+    b_setting = lv_btn_create(lv_scr_act());
+    
+    lv_obj_add_event_cb(b_setting, event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_style(b_setting, &style_btn_menu, 0);          // Apply default style
+    lv_obj_add_style(b_setting, &style_btn_menu_tgl, LV_STATE_CHECKED); 
+    lv_obj_align(b_setting, LV_ALIGN_BOTTOM_LEFT, 383, -2);
+    lv_obj_add_flag(b_setting, LV_OBJ_FLAG_CHECKABLE);
+    // Label Setting
+    label_setting = lv_label_create(b_setting);
+    lv_obj_center(label_setting);   
+    // Create styles for the label
+           // White when checked
+
+    // Apply the styles to the label
+    lv_obj_add_style(label_setting, &style_label_normal, 0);          // Default style
+    lv_obj_add_style(label_setting, &style_label_checked, b_setting);
+    lv_label_set_text(label_setting, LV_SYMBOL_SETTINGS);
+}
+
+
+
 void app_main(void)
 {
     static lv_disp_draw_buf_t disp_buf; // contains internal graphic buffer(s) called draw buffer(s)
@@ -291,29 +552,7 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-    // Configuration for SPIFFS
-    // esp_vfs_spiffs_conf_t conf = {
-    //     .base_path = "/spiffs",          // Mount point
-    //     .partition_label = "storages",    // Partition label from your partition table (partitions.csv)
-    //     .max_files = 5,                  // Max open files at a time
-    //     .format_if_mount_failed = false   // Don't format if mount fails
-    // };
-    // Mount SPIFFS
-    // ret = esp_vfs_spiffs_register(&conf);
-    // if (ret != ESP_OK) {
-    //     if (ret == ESP_FAIL) {
-    //         ESP_LOGE(TAG_MEM, "Failed to mount or format filesystem");
-    //     } else if (ret == ESP_ERR_NOT_FOUND) {
-    //         ESP_LOGE(TAG_MEM, "Failed to find SPIFFS partition");
-    //     } else {
-    //         ESP_LOGE(TAG_MEM, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-    //     }
-    //     return;
-    // }
-
-     // Unmount SPIFFS
-    // ESP_ERROR_CHECK(esp_vfs_spiffs_unregister(conf.partition_label));
-    // ESP_LOGI(TAG_MEM, "SPIFFS unmounted");
+    
     
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
     ESP_LOGI(TAG_LCD, "Turn off LCD backlight");
@@ -484,27 +723,10 @@ void app_main(void)
     
     ESP_LOGI(TAG_LCD, "Display LVGL Scatter Chart");
    
+
     scr = lv_disp_get_scr_act(disp);
     lv_obj_set_style_bg_color(scr, lv_color_white() , 0);
-    LV_IMG_DECLARE(khqr);
-    LV_IMG_DECLARE(dollar);
-    LV_IMG_DECLARE(aba_pay);
-    lv_obj_t * img1;
-    lv_obj_t * img2;
-    lv_obj_t * bank_img;
-    lv_obj_t * t_name;
-    lv_obj_t * t_price;
-    // Button menu
-    lv_obj_t * b_listbank;
-    lv_obj_t * b_qrwifi;
-    lv_obj_t * b_foodmenu;
-    lv_obj_t * b_setting;
-    // label menu
-    lv_obj_t * label_lb;
-    lv_obj_t * label_qrwifi;
-    lv_obj_t * label_foodmenu;
-    lv_obj_t * label_setting;
-   
+    menu_bar();
     img1 = lv_img_create(lv_scr_act());
     lv_style_t style_t_name;
     lv_style_init(&style_t_name);
@@ -514,11 +736,11 @@ void app_main(void)
     ESP_LOGI(TAG_LCD, "Displayed Image PNG");
     lv_obj_align(img1, LV_ALIGN_CENTER, 0, 30);
         
-        lv_example_qrcode_1();
-    bank_img = lv_img_create(lv_scr_act());
-    lv_img_set_src(bank_img, &aba_pay);
+       
+    bank_img_disp = lv_img_create(lv_scr_act());
+    lv_img_set_src(bank_img_disp, &acleda_white);
 
-    lv_obj_align(bank_img, LV_ALIGN_CENTER, 0, -310);
+    lv_obj_align(bank_img_disp, LV_ALIGN_CENTER, 0, -310);
     
     t_name = lv_label_create(lv_scr_act());
     lv_label_set_text(t_name, "Rithy SOURN");
@@ -529,7 +751,7 @@ void app_main(void)
     
    
     t_price = lv_label_create(lv_scr_act());
-    lv_label_set_text(t_price, "$ 0");
+    lv_label_set_text(t_price, "$ 10");
     lv_style_set_text_font(&style_t_price, &lv_font_montserrat_40);
     lv_obj_add_style(t_name, &style_t_name, 0);
     lv_obj_align(t_name, LV_ALIGN_CENTER, -70, -135);
@@ -543,125 +765,32 @@ void app_main(void)
     // lv_obj_set_style_transform_angle
     
     // lv_obj_set_style_transform_angle(t_name, 2700, LV_PART_MAIN);
-    img2 = lv_img_create(lv_scr_act());
-    lv_img_set_src(img2, &dollar);
-    lv_obj_align(img2, LV_ALIGN_CENTER, 0, 120);
+    
     // lv_img_set_angle(img2, 2700);
     
     // lv_example_png_1();
     // img = lv_img_create(lv_scr_act());
     // label style here 
-    lv_style_t style_label_normal;   // Normal state
-    lv_style_t style_label_checked;  // Checked state
-
-    lv_style_init(&style_label_normal);
-    lv_style_init(&style_label_checked);
-    lv_style_set_text_font(&style_label_normal, &lv_font_montserrat_24);
-    // Set label text colors for better contrast in both states
-    lv_style_set_text_color(&style_label_normal, lv_color_hex(0x0));  // Orange-red when unchecked
-    lv_style_set_text_color(&style_label_checked, lv_color_hex(0xFFFFFF)); 
-    // Button Here
-    // Button Menu Style 
-   
     
-    lv_style_t style_btn_menu;         // Style for the button
-    lv_style_t style_btn_menu_tgl;    // Style for the toggled state
-
-    // Initialize the button styles
-    lv_style_init(&style_btn_menu);
-    lv_style_init(&style_btn_menu_tgl);
-
-    // --- Button Style (Normal State) ---
-    lv_style_set_min_height(&style_btn_menu, 70);  // Set height
-    lv_style_set_width(&style_btn_menu, 121);         // Set width
-           
-    lv_style_set_bg_opa(&style_btn_menu, LV_OPA_TRANSP); // No background initially
-    lv_style_set_border_width(&style_btn_menu, 2);     // Add a border (stroke)
-    lv_style_set_border_color(&style_btn_menu, lv_color_hex(0xCBA02D)); // Set border color
-    lv_style_set_radius(&style_btn_menu, 0);
-    // --- Button Style (Toggled State) ---
-    lv_style_set_bg_opa(&style_btn_menu_tgl, LV_OPA_COVER);   // Solid background when toggled
-    lv_style_set_bg_color(&style_btn_menu_tgl, lv_color_hex(0xCBA02D));
-    lv_style_set_radius(&style_btn_menu_tgl, 0);
-    // List Bank Button 
-    b_listbank = lv_btn_create(lv_scr_act());
+    qr_bg_color = lv_color_white();
+    qr_fg_color = lv_palette_darken(0, 0);
+    qr = lv_qrcode_create(lv_scr_act(), 300, qr_fg_color, qr_bg_color);
     
-    lv_obj_add_event_cb(b_listbank, event_handler, LV_EVENT_ALL, NULL);
-    lv_obj_add_style(b_listbank, &style_btn_menu, 0);          // Apply default style
-    lv_obj_add_style(b_listbank, &style_btn_menu_tgl, LV_STATE_CHECKED); 
-    lv_obj_align(b_listbank, LV_ALIGN_BOTTOM_LEFT, 0, -2);
-    lv_obj_add_flag(b_listbank, LV_OBJ_FLAG_CHECKABLE);
-    // Label
-    label_lb = lv_label_create(b_listbank);
-    lv_obj_center(label_lb);
-    // Create styles for the label
-           // White when checked
-
-    // Apply the styles to the label
-    lv_obj_add_style(label_lb, &style_label_normal, 0);          // Default style
-    lv_obj_add_style(label_lb, &style_label_checked, LV_STATE_CHECKED);
+    /*Set data*/
     
-    lv_label_set_text(label_lb, LV_SYMBOL_LIST);
-    lv_obj_add_flag(label_lb, LV_OBJ_FLAG_CHECKABLE);
-    // WIFI QR Button 
-    b_qrwifi = lv_btn_create(lv_scr_act());
+    lv_qrcode_update(qr, qrString[0], strlen(qrString[0]));
     
-    lv_obj_add_event_cb(b_qrwifi, event_handler, LV_EVENT_ALL, NULL);
-    lv_obj_add_style(b_qrwifi, &style_btn_menu, 0);          // Apply default style
-    lv_obj_add_style(b_qrwifi, &style_btn_menu_tgl, LV_STATE_CHECKED); 
-    lv_obj_align(b_qrwifi, LV_ALIGN_BOTTOM_LEFT, 120, -2);
-    lv_obj_add_flag(b_qrwifi, LV_OBJ_FLAG_CHECKABLE);
-    // Label Qr wifi
-    label_qrwifi = lv_label_create(b_qrwifi);
-    lv_obj_center(label_qrwifi);
-    // Create styles for the label
-           // White when checked
+    // lv_obj_set_style_transform_angle(qr,2700, 0);
+    lv_obj_align(qr, LV_ALIGN_CENTER, 0, 120);
+    /*Add a border with bg_color*/
+    lv_obj_set_style_border_color(qr, qr_bg_color, 0);
+    lv_obj_set_style_border_width(qr, 5, 0);
 
-    // Apply the styles to the label
-    lv_obj_add_style(label_qrwifi, &style_label_normal, 0);          // Default style
-    lv_obj_add_style(label_qrwifi, &style_label_checked, b_qrwifi);
-    lv_label_set_text(label_qrwifi, LV_SYMBOL_WIFI);
+    img2 = lv_img_create(lv_scr_act());
+    lv_img_set_src(img2, &dollar);
+    lv_obj_align(img2, LV_ALIGN_CENTER, 0, 120);
 
-    // Foood Menu Button 
-    b_foodmenu = lv_btn_create(lv_scr_act());
-    
-    lv_obj_add_event_cb(b_foodmenu, event_handler, LV_EVENT_ALL, NULL);
-    lv_obj_add_style(b_foodmenu, &style_btn_menu, 0);          // Apply default style
-    lv_obj_add_style(b_foodmenu, &style_btn_menu_tgl, LV_STATE_CHECKED); 
-    lv_obj_align(b_foodmenu, LV_ALIGN_BOTTOM_LEFT, 240, -2);
-    lv_obj_add_flag(b_foodmenu, LV_OBJ_FLAG_CHECKABLE);
-    // Label Qr wifi
-    label_foodmenu = lv_label_create(b_foodmenu);
-    lv_obj_center(label_foodmenu);
-    // Create styles for the label
-           // White when checked
-
-    // Apply the styles to the label
-    lv_obj_add_style(label_foodmenu, &style_label_normal, 0);          // Default style
-    lv_obj_add_style(label_foodmenu, &style_label_checked, b_foodmenu);
-    lv_label_set_text(label_foodmenu, LV_SYMBOL_EDIT);
-
-    // Setting  Button 
-    b_setting = lv_btn_create(lv_scr_act());
-    
-    lv_obj_add_event_cb(b_setting, event_handler, LV_EVENT_ALL, NULL);
-    lv_obj_add_style(b_setting, &style_btn_menu, 0);          // Apply default style
-    lv_obj_add_style(b_setting, &style_btn_menu_tgl, LV_STATE_CHECKED); 
-    lv_obj_align(b_setting, LV_ALIGN_BOTTOM_LEFT, 359, -2);
-    lv_obj_add_flag(b_setting, LV_OBJ_FLAG_CHECKABLE);
-    // Label Qr wifi
-    label_setting = lv_label_create(b_setting);
-    lv_obj_center(label_setting);
-    // Create styles for the label
-           // White when checked
-
-    // Apply the styles to the label
-    lv_obj_add_style(label_setting, &style_label_normal, 0);          // Default style
-    lv_obj_add_style(label_setting, &style_label_checked, b_setting);
-    lv_label_set_text(label_setting, LV_SYMBOL_SETTINGS);
-
-    
-    
+    lv_obj_add_event_cb(lv_scr_act(),swipeable_obj_event_cb,LV_EVENT_ALL,NULL);
     
     
     
