@@ -16,6 +16,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "lvgl.h"
+
 #include "examples/lv_examples.h"
 
 #include "driver/i2c.h"
@@ -115,20 +116,32 @@ static lv_obj_t *scr;
 //
 
 
-// LV  OBJECT 
-LV_IMG_DECLARE(khqr);
+    // LV  OBJECT 
+    LV_IMG_DECLARE(khqr);
     LV_IMG_DECLARE(dollar);
     LV_IMG_DECLARE(aba_pay);
     LV_IMG_DECLARE(acleda_white);
-    lv_obj_t * qr;
+    // LV_IMG_DECLARE(sathapana);
+    LV_IMG_DECLARE(canadia)
+    LV_IMG_DECLARE(riel);
+    // Qrcode object 
+    static lv_obj_t * qr;
+    // rect app
+    static lv_obj_t * rect_home; 
+    static lv_obj_t * rect_list;
+    static lv_obj_t * rect_wifi;
+    static lv_obj_t * rect_setting;
+    static lv_obj_t * rect_menu;
+
     // QR Devices
-    static lv_obj_t * img1;
-    static lv_obj_t * img2;
+    static lv_obj_t * khqr_bg;
+    static lv_obj_t * currency_img;
     static lv_obj_t * bank_img_disp;
     static lv_obj_t * bank_img_hide;
     static lv_obj_t * t_name;
     static lv_obj_t * t_price;
     // Button menu
+    
     static lv_obj_t * b_listbank;
     static lv_obj_t * b_qrwifi;
     static lv_obj_t * b_foodmenu;
@@ -148,14 +161,37 @@ LV_IMG_DECLARE(khqr);
     static lv_style_t  style_label_checked;  // Checked state
     static lv_color_t qr_bg_color;
     static lv_color_t qr_fg_color;
+
+    // Label 
+    static lv_style_t style_t_name;
+   
+    static lv_style_t style_t_price;
+   
 //
-static const char* qrString[] = {
+static  char* rielqr[] = {
+    // dummy riel qr
+    "00020101021129360009khqr@aclb01090125202660206ACLEDA3920001185519766794010145204200053031165802KH5911SOURN RITHY6010PHNOM PENH6213020901252026663049032",
+    "00020101021129450016abaakhppxxx@abaa01090096294450208ABA Bank40390006abaP2P011224D93FFFC17102090096294455204000053031165802KH5911Rithy SOURN6010Phnom Penh6304DB16",
+    "00020101021129450016cadikhppxxx@cadi011306800000334140204cadi5204599953031165802KH5914PHAL BRILLIANT6010Phnom Penh9917001317170525193466304C617",
+    
+};
+static char* dollarqr[] = {
+     // dummy dollar qr
     "00020101021229360009khqr@aclb01090125202660206ACLEDA392000118551976679401014520420005303840540510.005802KH5911SOURN RITHY6010PHNOM PENH6213020901252026663046A5E", 
     "00020101021229450016abaakhppxxx@abaa01090002118870208ABA Bank40390006abaP2P011224D93FFFC1710209000211887520400005303840540410.05802KH5911Rithy SOURN6010Phnom Penh6304EA02",
-     // Optional: Null terminator for easy iteration
+    "00020101021129450016cadikhppxxx@cadi011306800000334060204cadi5204599953038405802KH5914PHAL BRILLIANT6010Phnom Penh9917001317144495763586304B4A7",
+    
 };
-static bool state_swipe = 0;
+static char* name[] = {
+    "Rithy SOURN", "SOURN Rithy", "Brilliant Phal",
+};
+static char* price[] = {
+    "$ 10", "$ 10.00", "$0"
+}; 
 
+static int8_t s_swipe_bank = 0;
+
+ static lv_point_t line_points[5];
 ///
 
 
@@ -204,39 +240,6 @@ void example_touchpad_read( lv_indev_drv_t * drv, lv_indev_data_t * data )
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-void print_mounted_partition_info(const esp_partition_t* partition) {
-    if (partition) {
-        ESP_LOGI(TAG_MEM, "Mounted Partition Information:");
-        ESP_LOGI(TAG_MEM, "  Label: %s", partition->label);
-        ESP_LOGI(TAG_MEM, "  Type: %d", partition->type);
-        ESP_LOGI(TAG_MEM, "  Subtype: %d", partition->subtype);
-       
-        // ESP_LOGI(TAG_MEM, "  Address (Start): 0x%lu", partition->address);
-        // ESP_LOGI(TAG_MEM, "  Size: %ld bytes", partition->size);
-        // ESP_LOGI(TAG_MEM, "  Encrypted: %s", partition->encrypted ? "Yes" : "No");
-    } else {
-        ESP_LOGE(TAG_MEM, "Partition is not mounted");
-    }
-}
-
-void list_files_in_directory(const char* dir_path) {
-    DIR dir;
-    FILINFO fno;
-    
-    if (f_opendir(&dir, dir_path) != FR_OK) {
-        ESP_LOGE(TAG_MEM, "Failed to open directory: %s", dir_path);
-        return;
-    }
-
-    while (f_readdir(&dir, &fno) == FR_OK && fno.fname[0] != 0) {
-        if (fno.fattrib & AM_DIR) {
-            ESP_LOGI(TAG_MEM, "Found directory: %s", fno.fname);
-        } else {
-            ESP_LOGI(TAG_MEM, "Found file: %s", fno.fname);
-        }
-    }
-}
 static void event_handler(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -248,6 +251,138 @@ static void event_handler(lv_event_t * e)
         ESP_LOGI(TAG_LCD,"Toggled");
     }
 }
+static void drag_event_handler(lv_event_t * e)
+{
+    lv_obj_t * obj = lv_event_get_target(e);
+
+    lv_indev_t * indev = lv_indev_get_act();
+    if(indev == NULL)  return;
+
+    lv_point_t vect;
+    lv_indev_get_vect(indev, &vect);
+
+    lv_coord_t x = lv_obj_get_x(obj)+vect.x;
+    lv_coord_t y= lv_obj_get_y(obj);    
+    ESP_LOGI(TAG_LCD, "LINE X=%d",   vect.x );
+    lv_obj_set_pos(obj, x, 22);
+}
+static void bank_disp(uint8_t state_bank, char* name, char* amount, bool currency){
+     // Currency using boolean when 0 = riel , 1 = dollar ;
+    lv_style_t blue;
+    lv_style_init(&blue);
+     lv_style_init(&style_t_name);
+     lv_style_init(&style_t_price);
+    rect_home = lv_obj_create(lv_scr_act());
+    //   lv_style_set_bg_color(&blue, );
+    lv_obj_set_size(rect_home,480, 760 );
+    lv_obj_set_pos(rect_home, 0, 22);
+    // lv_style_set_bg_opa(&rect_home, LV_OPA_COVER); // Set background opacity to fully cover
+    
+    //  lv_obj_align(rect_home, LV_ALIGN_CENTER, 0, -25);
+    
+ 
+   
+    
+    
+    khqr_bg = lv_img_create(rect_home);
+    lv_img_set_src(khqr_bg, &khqr);
+    lv_obj_align(khqr_bg, LV_ALIGN_CENTER, 0, 30);
+    
+    
+    t_name = lv_label_create(rect_home);
+   
+    lv_label_set_text(t_name, name);
+    lv_obj_set_style_text_align(t_name,LV_TEXT_ALIGN_LEFT,0);
+       lv_obj_add_style(t_name,&style_t_name,0);
+    lv_style_set_text_font(&style_t_name, &lv_font_montserrat_22);
+    lv_style_set_text_align(&style_t_name,LV_TEXT_ALIGN_LEFT);
+    
+    // lv_style_set_text_font(&style_t_name, &lv_font_montserrat_40); 
+    
+    
+ 
+   
+// Apply the style to the label
+    
+   
+    t_price = lv_label_create(rect_home);
+    lv_label_set_text(t_price, amount);
+    lv_obj_set_style_text_align(t_price,LV_TEXT_ALIGN_LEFT,0);
+    lv_obj_add_style(t_price, &style_t_price, 0);
+    lv_style_set_text_font(&style_t_price, &lv_font_montserrat_40);
+    
+   
+    lv_obj_align(t_name, LV_ALIGN_LEFT_MID, 60, -135);
+    
+    lv_obj_align(t_price, LV_ALIGN_LEFT_MID, 60, -90);
+    // // Currency 
+    qr = lv_qrcode_create(rect_home, 300,  lv_color_white(), lv_color_black());
+    currency_img = lv_img_create(rect_home);
+
+    lv_obj_align(currency_img, LV_ALIGN_CENTER, 0, 120);
+    bank_img_disp = lv_img_create(rect_home);
+    lv_obj_align(bank_img_disp, LV_ALIGN_CENTER, 0, -300);
+    //  // lv_obj_set_style_transform_angle(qr,2700, 0);
+   
+    
+
+    
+    
+    
+    lv_obj_set_style_border_color(qr, lv_color_white(), 0);
+    lv_obj_set_style_border_width(qr, 5, 0);
+    lv_obj_align(qr, LV_ALIGN_CENTER, 0, 120);
+     lv_obj_add_event_cb(rect_home, drag_event_handler, LV_EVENT_PRESSING, NULL);
+    if(!currency) {
+        
+        lv_img_set_src(currency_img, &riel);
+       
+         switch(state_bank){
+            case 0: //Acleda 
+            ESP_LOGI(TAG_LCD,"ACLEDA");
+             lv_img_set_src(bank_img_disp,&acleda_white); // dollarqr
+             lv_qrcode_update(qr, rielqr[state_bank], strlen(rielqr[state_bank]));
+                break;
+            case 1: //ABA 
+             ESP_LOGI(TAG_LCD,"ABA");
+            lv_img_set_src(bank_img_disp,&aba_pay);
+             lv_qrcode_update(qr, rielqr[state_bank], strlen(rielqr[state_bank]));
+             break;
+            case 2: // Canadia
+             ESP_LOGI(TAG_LCD,"CANADIA");
+            lv_img_set_src(bank_img_disp,&canadia);
+             lv_qrcode_update(qr, rielqr[state_bank], strlen(rielqr[state_bank]));
+             break;
+
+       }       
+    
+    }
+    else{
+        lv_img_set_src(currency_img, &dollar);
+     
+         switch(state_bank){
+            case 0: //Acleda 
+            ESP_LOGI(TAG_LCD,"ACLEDA");
+             lv_img_set_src(bank_img_disp,&acleda_white); // dollarqr
+             lv_qrcode_update(qr, dollarqr[state_bank], strlen(dollarqr[state_bank]));
+                break;
+            case 1: //ABA 
+             ESP_LOGI(TAG_LCD,"ABA");
+            lv_img_set_src(bank_img_disp,&aba_pay);
+             lv_qrcode_update(qr, dollarqr[state_bank], strlen(dollarqr[state_bank]));
+             break;
+            case 2: // Canadia
+             ESP_LOGI(TAG_LCD,"CANADIA");
+            lv_img_set_src(bank_img_disp,&canadia);
+             lv_qrcode_update(qr, dollarqr[state_bank], strlen(dollarqr[state_bank]));
+             break;
+           
+
+        }   
+    }
+
+}
+static void clear_bank_disp();
 
 
 static void qrcode_display(char* qrstring){
@@ -264,8 +399,22 @@ static void qrcode_display(char* qrstring){
     /*Add a border with bg_color*/
     lv_obj_set_style_border_color(qr, qr_bg_color, 0);
     lv_obj_set_style_border_width(qr, 5, 0);
+    
 }
 ////////////////////////////////////////////////////////////////////////////////
+// Callback Time , 
+
+static void cb_time_disp_img(lv_timer_t *timer){
+   
+    
+    bank_img_hide = lv_img_create(lv_scr_act());
+        // ... (configure and display the new image as before) ...
+    lv_img_set_src(bank_img_hide, &aba_pay);
+
+    lv_obj_align(bank_img_hide, LV_ALIGN_CENTER, 0, -310);
+    // lv_qrcode_update(qr, qrString[1], strlen(qrString[1]));
+}
+
 // Callback function for gesture events
 static void swipeable_obj_event_cb(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
@@ -277,28 +426,28 @@ static void swipeable_obj_event_cb(lv_event_t * e) {
             lv_dir_t dir = lv_indev_get_gesture_dir(indev);
 
             // Determine swipe direction and animate
-            if ((dir == LV_DIR_LEFT) && (state_swipe == 0)) {
+            if ((dir == LV_DIR_LEFT) && (s_swipe_bank == 0)) {
                 ESP_LOGI(TAG_LCD, "Swiped left");  // Add logging to see if the callback is triggered
                 // ... (Animation code to move left) ...
                 lv_anim_t a;
                 lv_anim_init(&a);
-                lv_anim_set_var(&a, bank_img_disp);
-                lv_anim_set_values(&a, lv_obj_get_x(bank_img_disp), -lv_obj_get_width(bank_img_disp)); 
+                // lv_anim_set_var(&a, bank_img_disp);
+                lv_anim_set_var(&a, qr);
+                lv_anim_set_values(&a, lv_obj_get_x(qr), -lv_obj_get_width(qr)); 
                 lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x); // Move horizontally
-                lv_animimg_set_duration(&a, 300);  
+                // lv_animimg_set_duration(&a, 50);  
                 lv_anim_set_ready_cb(&a, lv_obj_del_anim_ready_cb); // Delete after animation finishes
                 lv_anim_start(&a);
                 
-                lv_obj_clean(bank_img_disp);
+                lv_obj_del(bank_img_disp);
                 // vTaskDelay(pdMS_TO_TICKS(310));
-                bank_img_hide = lv_img_create(lv_scr_act());
-                lv_img_set_src(bank_img_hide, &aba_pay);
+                lv_timer_t * timer = lv_timer_create(cb_time_disp_img, 570, NULL); // 310 ms delay
+                lv_timer_set_repeat_count(timer, 1); // Run only once
 
-                lv_obj_align(bank_img_hide, LV_ALIGN_CENTER, 0, -310);
-                lv_qrcode_update(qr, qrString[1], strlen(qrString[1]));
-                state_swipe = 1;
+                
+                s_swipe_bank = 1;
                  
-            } else if ((dir == LV_DIR_RIGHT)  && (state_swipe == 1)) {
+            } else if ((dir == LV_DIR_RIGHT)  && (s_swipe_bank == 1)) {
                 ESP_LOGI(TAG_LCD, "Swiped right"); // Add logging
                 // ... (Animation code to move right) ...
                 ESP_LOGI(TAG_LCD, "Swiped left");  // Add logging to see if the callback is triggered
@@ -314,13 +463,13 @@ static void swipeable_obj_event_cb(lv_event_t * e) {
                 lv_obj_clean(bank_img_hide);
                 //  vTaskDelay(pdMS_TO_TICKS(310));
                 
-                bank_img_disp = lv_timer_create(lv_scr_act());
+                bank_img_disp = lv_img_create(lv_scr_act());
                 lv_img_set_src(bank_img_disp, &acleda_white);
 
                 lv_obj_align(bank_img_disp, LV_ALIGN_CENTER, 0, -310);
                 
-                 lv_qrcode_update(qr, qrString[0], strlen(qrString[0]));
-                 state_swipe = 0 ;
+                //  lv_qrcode_update(qr, qrString[0], strlen(qrString[0]));
+                 s_swipe_bank = 0 ;
             } 
         } else {
             ESP_LOGE("SWIPE", "Active input device not found"); // Error logging
@@ -336,7 +485,7 @@ static void example_lvgl_touch_cb(lv_indev_drv_t * drv, lv_indev_data_t * data)
     uint16_t touchpad_x[1] = {0};
     uint16_t touchpad_y[1] = {0};
     uint8_t touchpad_cnt = 0;
-    static lv_point_t line_points[5];
+   
 
     /* Read touch controller data */
     esp_lcd_touch_read_data(drv->user_data);
@@ -723,74 +872,39 @@ void app_main(void)
     
     ESP_LOGI(TAG_LCD, "Display LVGL Scatter Chart");
    
+    // default background display 
 
+    lv_style_t style_no_scroll;
+    lv_style_init(&style_no_scroll);
     scr = lv_disp_get_scr_act(disp);
     lv_obj_set_style_bg_color(scr, lv_color_white() , 0);
+    lv_style_set_pad_all(&style_no_scroll, 0);          // Remove padding to prevent hidden scrollbars
+    lv_obj_set_scroll_snap_x(scr, LV_SCROLL_SNAP_NONE); // Disable horizontal scroll snap
+    lv_obj_set_scroll_snap_y(scr, LV_SCROLL_SNAP_NONE);
+    lv_obj_add_style(scr, &style_no_scroll, 0);
+    lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);   // Disable scrollability
+    lv_obj_set_scrollbar_mode(scr, LV_SCROLLBAR_MODE_OFF);
     menu_bar();
-    img1 = lv_img_create(lv_scr_act());
-    lv_style_t style_t_name;
-    lv_style_init(&style_t_name);
-    lv_style_t style_t_price;
-    lv_style_init(&style_t_price);
-    lv_img_set_src(img1, &khqr);
-    ESP_LOGI(TAG_LCD, "Displayed Image PNG");
-    lv_obj_align(img1, LV_ALIGN_CENTER, 0, 30);
-        
-       
-    bank_img_disp = lv_img_create(lv_scr_act());
-    lv_img_set_src(bank_img_disp, &acleda_white);
-
-    lv_obj_align(bank_img_disp, LV_ALIGN_CENTER, 0, -310);
+     bank_disp(1,name[1],price[0],0);
     
-    t_name = lv_label_create(lv_scr_act());
-    lv_label_set_text(t_name, "Rithy SOURN");
-    lv_style_set_text_font(&style_t_name, &lv_font_montserrat_22); 
 
-    // lv_style_set_text_font(&style_t_name, LV_FONT_DEFAULT);
-// Apply the style to the label
+
+       
+    
+    
     
    
-    t_price = lv_label_create(lv_scr_act());
-    lv_label_set_text(t_price, "$ 10");
-    lv_style_set_text_font(&style_t_price, &lv_font_montserrat_40);
-    lv_obj_add_style(t_name, &style_t_name, 0);
-    lv_obj_align(t_name, LV_ALIGN_CENTER, -70, -135);
-    lv_obj_add_style(t_price, &style_t_price, 0);
-    lv_obj_align(t_price, LV_ALIGN_CENTER, -115, -90);
-    ESP_LOGI(TAG_LCD,"Text state  %d", lv_obj_get_state(t_name));
-    ESP_LOGI(TAG_LCD, "Text translate %d %d", lv_obj_get_x(img1),lv_obj_get_y (img1));
-    // lv_obj_set_style_transform_angle(t_name, , LV_PART_MAIN);
-    // lv_obj_align(t_name, LV_ALIGN_CENTER, -100, 90);
-    // lv_obj_add_style(t_name,&style_rotated, 1);
-    // lv_obj_set_style_transform_angle
     
-    // lv_obj_set_style_transform_angle(t_name, 2700, LV_PART_MAIN);
     
-    // lv_img_set_angle(img2, 2700);
     
-    // lv_example_png_1();
-    // img = lv_img_create(lv_scr_act());
-    // label style here 
-    
-    qr_bg_color = lv_color_white();
-    qr_fg_color = lv_palette_darken(0, 0);
-    qr = lv_qrcode_create(lv_scr_act(), 300, qr_fg_color, qr_bg_color);
     
     /*Set data*/
     
-    lv_qrcode_update(qr, qrString[0], strlen(qrString[0]));
+   
     
-    // lv_obj_set_style_transform_angle(qr,2700, 0);
-    lv_obj_align(qr, LV_ALIGN_CENTER, 0, 120);
-    /*Add a border with bg_color*/
-    lv_obj_set_style_border_color(qr, qr_bg_color, 0);
-    lv_obj_set_style_border_width(qr, 5, 0);
+   
 
-    img2 = lv_img_create(lv_scr_act());
-    lv_img_set_src(img2, &dollar);
-    lv_obj_align(img2, LV_ALIGN_CENTER, 0, 120);
-
-    lv_obj_add_event_cb(lv_scr_act(),swipeable_obj_event_cb,LV_EVENT_ALL,NULL);
+    // lv_obj_add_event_cb(lv_scr_act(),swipeable_obj_event_cb,LV_EVENT_ALL,NULL);
     
     
     
