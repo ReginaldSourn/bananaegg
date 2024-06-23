@@ -188,7 +188,7 @@ static char* name[] = {
 static char* price[] = {
     "$ 10", "$ 10.00", "$0"
 }; 
-static bool s_currency;
+static bool s_currency = 0;
 static int8_t s_swipe_bank = 0;
 static int8_t s_menu = 0 ; 
  static lv_point_t line_points[5];
@@ -266,6 +266,15 @@ static void cb_time_disp_img(lv_timer_t *timer){
     // lv_obj_align(bank_img_hide, LV_ALIGN_CENTER, 0, -310);
     // lv_qrcode_update(qr, qrString[1], strlen(qrString[1]));
 }
+static void set_width(void * var, int32_t v)
+{
+    lv_obj_set_width((lv_obj_t *)var, v);
+}
+
+static void set_height(void * var, int32_t v)
+{
+    lv_obj_set_height((lv_obj_t *)var, v);
+}
 static void drag_event_handler(lv_event_t * e)
 {
     lv_obj_t * obj = lv_event_get_target(e);
@@ -274,6 +283,7 @@ static void drag_event_handler(lv_event_t * e)
     if(indev == NULL)  return;
     int16_t x_pressing= lv_obj_get_x(obj);
     int16_t y_pressing = lv_obj_get_height(qr);
+    int16_t c_h = lv_obj_get_height(currency_img);
     lv_point_t vect;
     lv_indev_get_vect(indev, &vect);
     lv_coord_t x ;
@@ -288,15 +298,25 @@ static void drag_event_handler(lv_event_t * e)
             
             ESP_LOGI(TAG_LCD, "move x: %d", x_pressing - x );
             
-            if(abs(x)>30){
+            if(abs(x)>40){
                 lv_obj_set_pos(obj, x, -24);
             }
             if(abs(y)>50){
                 lv_obj_set_height(qr,lv_obj_get_height(qr)-y*1);
                 lv_obj_set_height(currency_img,lv_obj_get_height(currency_img)-y*1);
             }
-            // if(y_pressing-s )
-            
+            if((y_pressing-y)<270){
+                if(s_currency) {
+                lv_qrcode_update(qr, rielqr[s_swipe_bank], strlen(rielqr[s_swipe_bank]));
+                lv_img_set_src(currency_img, &riel);
+                s_currency =0;
+                }
+                else{
+                lv_qrcode_update(qr, dollarqr[s_swipe_bank], strlen(dollarqr[s_swipe_bank]));
+                lv_img_set_src(currency_img, &dollar);
+                s_currency =1;
+            }
+            }
             
             if(x_pressing - x > 69){
                 lv_anim_t a;
@@ -304,7 +324,7 @@ static void drag_event_handler(lv_event_t * e)
 
                 lv_anim_set_var(&a, obj);
                 lv_anim_set_values(&a,lv_obj_get_x(obj), -480); 
-                lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x); // Move horizontally
+                lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x);  // Move horizontally
                 
                 lv_anim_set_ready_cb(&a, lv_obj_del_anim_ready_cb); // Delete after animation finishes
                 lv_anim_set_time(&a, 1000);  
@@ -325,7 +345,7 @@ static void drag_event_handler(lv_event_t * e)
                   // lv_anim_set_var(&a, bank_img_disp);
                 lv_anim_set_var(&a, obj);
                 lv_anim_set_values(&a,lv_obj_get_x(obj), 480); 
-                lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x); // Move horizontally
+                lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x);  // Move horizontally
                 
                 lv_anim_set_ready_cb(&a, lv_obj_del_anim_ready_cb); // Delete after animation finishes
                 lv_anim_set_time(&a, 1000);  
@@ -353,10 +373,19 @@ static void drag_event_handler(lv_event_t * e)
             lv_anim_t qra ;
             lv_anim_init(&qra);
             lv_anim_set_var(&qra, qr);
-            lv_anim_set_values(&qra, lv_obj_get_height(qr), 300);
-            lv_anim_set_exec_cb(&qra (lv_anim_exec_xcb_t)set_height);
+            lv_anim_set_values(&qra, lv_obj_get_height(qr), 305);
+            lv_anim_set_exec_cb(&qra, (lv_anim_exec_xcb_t)set_height);
             lv_anim_set_time(&qra, 300);
             lv_anim_start(&qra);
+            lv_anim_t ca ;
+            lv_anim_init(&ca);
+            lv_anim_set_var(&ca, currency_img);
+            lv_anim_set_values(&ca, lv_obj_get_height(currency_img), 60);
+            lv_anim_set_exec_cb(&ca, (lv_anim_exec_xcb_t)set_height);
+            lv_anim_set_time(&ca, 300);
+            lv_anim_start(&b);
+            lv_anim_start(&qra);
+            lv_anim_start(&ca);
             break;
         case LV_DIR_LEFT:
             
@@ -376,15 +405,7 @@ static void drag_release_handler(lv_event_t *e)
 {
     lv_obj_t * obj = lv_event_get_target(e);
 }
-static void set_width(void * var, int32_t v)
-{
-    lv_obj_set_width((lv_obj_t *)var, v);
-}
 
-static void set_height(void * var, int32_t v)
-{
-    lv_obj_set_height((lv_obj_t *)var, v);
-}
 static void bank_disp(uint8_t state_bank, char* name, char* amount, bool currency){
      // Currency using boolean when 0 = riel , 1 = dollar ;
    
