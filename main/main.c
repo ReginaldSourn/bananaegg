@@ -126,7 +126,7 @@ static lv_obj_t *scr;
     LV_IMG_DECLARE(riel);
     // Qrcode object 
      static lv_obj_t * qr;
-    // static lv_obj_t * qr_hide;
+    static lv_obj_t * qr_hide;
     // rect app
     
     static lv_obj_t * rect_home_visible;
@@ -208,7 +208,8 @@ static int8_t s_swipe_bank = 0;
 static int8_t s_menu = 0 ; 
  static lv_point_t line_points[5];
 ///
-
+static bool s_create_b = 0 ;
+static bool s_rect_b = 0; 
 
 /**
  * @brief i2c master initialization
@@ -378,10 +379,26 @@ static void drag_event_handler(lv_event_t * e)
             
              if(x<(-10)){
                 lv_obj_set_pos(obj, x, -24);
+                if (s_rect_b == 0){
+                    if( state_create == 0){
+                        bank_disp(0, "Hello", 0, 500,-24);
+                        state_create =1;
+                        }
+                    
+                        lv_obj_set_pos(rect_home_visible, 500+x,-24);
+                }
+                else { 
+                    if( state_create == 0){
+                        bank_hide_disp(0, "Hello", 0, 500,-24);
+                        state_create =1;
+                        }
+                    
+                        lv_obj_set_pos(rect_home_visible, 500+x,-24);
+                }
+             }
                 
-                // lv_obj_set_pos(rect_home_vibank_disp(0, "Hello", 0,20,-24);sible,-500+x,-24);
-                
-            //  }
+              
+            
             if((x_pressing - x > 70 || x < (-300))){
                 lv_anim_t a;
                 lv_anim_init(&a);
@@ -394,10 +411,11 @@ static void drag_event_handler(lv_event_t * e)
                 lv_anim_set_time(&a, 3000);  
                 lv_anim_start(&a); // panic handler when obj not delete
                 lv_obj_del(obj);
-                // lv_timer_t * timerd = lv_timer_create(delete_object_timer, 300, NULL);
-                // lv_obj_set_pos(rect_home_hide, abs(x)+500, 0);
+                lv_timer_t * timerd = lv_timer_create(delete_object_timer, 300, NULL);
+                lv_obj_set_pos(rect_home_hide, abs(x)+500, 0);
                 s_swipe_bank++;
                 ESP_LOGI(TAG_LCD, "swipe left: %d", s_swipe_bank);
+                
                 // lv_timer_t * timer = lv_timer_create(cb_time_disp_img, 100, NULL);
                 
                 // bank_disp(0,"Hello","$ 10",1);
@@ -423,13 +441,7 @@ static void drag_event_handler(lv_event_t * e)
                 // lv_timer_t * timerd = lv_timer_create(delete_object_timer, 300, NULL);
                 s_swipe_bank = s_swipe_bank -1 ;
                 ESP_LOGI(TAG_LCD, "swipe right: %d", s_swipe_bank);
-                // lv_timer_t * timer = lv_timer_create(cb_time_disp_img, 60, NULL);
-                
-                // bank_disp(0,"Hello","$ 10",1);
-                // vTaskDelay(pdMS_TO_TICKS(310));
                
-                // lv_timer_set_repeat_count(timerd, 1);
-                // lv_timer_set_repeat_count(timer, 1); // Run only once
             }
             break;
          
@@ -476,7 +488,7 @@ static void drag_release_handler(lv_event_t *e)
 static void bank_hide_disp(uint8_t state_bank, char* name, bool currency, int16_t posx, int16_t posy){
      /* State hide disp  = 1, state display = 0*/
      lv_obj_t * qr_hide;
-   rect_home_hide = lv_obj_create(lv_scr_act());
+    rect_home_hide = lv_obj_create(lv_scr_act());
     //   lv_style_set_bg_color(&blue, );
     
     
@@ -505,7 +517,7 @@ static void bank_hide_disp(uint8_t state_bank, char* name, bool currency, int16_
     
     lv_obj_align(t_price_hide, LV_ALIGN_LEFT_MID, 60, -90);
     // // Currency 
-    qr_hide = lv_qrcode_create(rect_home_hide, 300,  lv_color_white(), lv_color_black());
+    qr_hide = lv_qrcode_create(rect_home_hide, 260,  lv_color_white(), lv_color_black());
     currency_img_hide = lv_img_create(qr_hide);
 
     lv_obj_align(currency_img_hide, LV_ALIGN_CENTER, 0, 0);
@@ -549,45 +561,37 @@ static void bank_disp(uint8_t state_bank, char* name, bool currency,int16_t posx
    
 
     rect_home_visible = lv_obj_create(lv_scr_act());
-    //   lv_style_set_bg_color(&blue, );
-    
-    
-    
-       lv_obj_align(rect_home_visible, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(rect_home_visible, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_size(rect_home_visible,EXAMPLE_LCD_H_RES,750);
 
     khqr_bg = lv_img_create(rect_home_visible);
     lv_img_set_src(khqr_bg, &khqr);
     lv_obj_align(khqr_bg, LV_ALIGN_CENTER, 0, 30);
-    
-    
+ 
     t_name = lv_label_create(rect_home_visible);
     lv_obj_add_style(t_name,&style_t_name,0);
     lv_obj_set_style_text_align(t_name,LV_TEXT_ALIGN_LEFT,0);
     
     lv_label_set_text(t_name, name);
   
- 
 // Apply the style to the label
     
-   
     t_price = lv_label_create(rect_home_visible);
-     lv_obj_add_style(t_price, &style_t_price, 0);
+    lv_obj_add_style(t_price, &style_t_price, 0);
     lv_obj_set_style_text_align(t_price,LV_TEXT_ALIGN_LEFT,0);
     lv_obj_align(t_name, LV_ALIGN_LEFT_MID, 60, -135);
-    
     lv_obj_align(t_price, LV_ALIGN_LEFT_MID, 60, -90);
+
     // Currency 
-    qr = lv_qrcode_create(rect_home_visible, 300,  lv_color_white(), lv_color_black());
-    lv_qrcode_update(qr, rielqr[state_bank], strlen(rielqr[state_bank]));
+    qr = lv_qrcode_create(rect_home_visible, 260,  lv_color_white(), lv_color_black());
+   
     currency_img = lv_img_create(qr);
 
     lv_obj_align(currency_img, LV_ALIGN_CENTER, 0, 0);
     bank_img_disp = lv_img_create(rect_home_visible);
     lv_obj_align(bank_img_disp, LV_ALIGN_CENTER, 0, -300);
-     lv_obj_set_style_transform_angle(qr,2700, 0);
+   
 
-    
     lv_obj_set_style_border_color(qr, lv_color_white(), 0);
     lv_obj_set_style_border_width(qr, 5, 0);
     lv_obj_align(qr, LV_ALIGN_CENTER, 0, 120);
@@ -596,9 +600,8 @@ static void bank_disp(uint8_t state_bank, char* name, bool currency,int16_t posx
     if(!currency) {
         
         lv_img_set_src(currency_img, &riel);
-
         lv_img_set_src(bank_img_disp,list_bank[state_bank]);
-        // lv_qrcode_update(qr, rielqr[state_bank], strlen(rielqr[state_bank]));
+        lv_qrcode_update(qr, rielqr[state_bank], strlen(rielqr[state_bank]));
         lv_label_set_text(t_price, priceriel);
 
        
@@ -606,9 +609,8 @@ static void bank_disp(uint8_t state_bank, char* name, bool currency,int16_t posx
     }
     else{
         lv_img_set_src(currency_img, &dollar);
-     
         lv_img_set_src(bank_img_disp,list_bank[state_bank]);
-        // lv_qrcode_update(qr, dollarqr[state_bank], strlen(dollarqr[state_bank]));
+        lv_qrcode_update(qr, dollarqr[state_bank], strlen(dollarqr[state_bank]));
         lv_label_set_text(t_price, pricedollar[state_bank]);
 
     }
@@ -710,25 +712,6 @@ lv_anim_start(&a2);
 }
 static void clear_bank_disp();
 
-
-// static void qrcode_display(char* qrstring){
-//     qr_bg_color = lv_color_white();
-//     qr_fg_color = lv_palette_darken(0, 0);
-//     qr = lv_qrcode_create(lv_scr_act(), 300, qr_fg_color, qr_bg_color);
-    
-//     /*Set data*/
-    
-//     lv_qrcode_update(qr, qrstring, strlen(qrstring));
-    
-//     // lv_obj_set_style_transform_angle(qr,2700, 0);
-//     lv_obj_align(qr, LV_ALIGN_CENTER, 0, 120);
-//     /*Add a border with bg_color*/
-//     lv_obj_set_style_border_color(qr, qr_bg_color, 0);
-//     lv_obj_set_style_border_width(qr, 5, 0);
-    
-// }
-////////////////////////////////////////////////////////////////////////////////
-// Callback Time , 
 
 
 
@@ -1156,7 +1139,7 @@ void app_main(void)
     menu_bar();
     //  bank_popup_disp(s_swipe_bank,name[s_swipe_bank],s_currency);
     
-    bank_disp(0, "Hello", 0,20,-24);
+    
     bank_hide_disp(s_swipe_bank,name[s_swipe_bank],s_currency,0,-24);
     /*Set data*/
 
