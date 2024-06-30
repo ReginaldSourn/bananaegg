@@ -125,8 +125,10 @@ static lv_obj_t *scr;
     // LV_IMG_DECLARE(sathapana);
     LV_IMG_DECLARE(canadia)
     LV_IMG_DECLARE(riel);
-    LV_IMG_DECLARE(dollar_red);
-    LV_IMG_DECLARE(riel_red);
+    // LV_IMG_DECLARE(dollar_red);
+    // LV_IMG_DECLARE(riel_red);
+    LV_IMG_DECLARE(coffee_house);
+    
     // Qrcode object 
      static lv_obj_t * qr;
     static lv_obj_t * qr_hide;
@@ -151,6 +153,8 @@ static lv_obj_t *scr;
     static lv_obj_t * t_price_hide;
     static lv_obj_t * currency_img_hide;
     static lv_obj_t * bank_img_hide;
+    static lv_obj_t * logo_company; 
+
     // Button menu
     
     static lv_obj_t * b_listbank;
@@ -165,6 +169,11 @@ static lv_obj_t *scr;
     static lv_obj_t * label_foodmenu;
     static lv_obj_t * label_setting;
     static lv_obj_t * label_home;
+    // label wifiqr
+    static lv_obj_t * wifiqr;
+    static lv_obj_t * wifiSSID;
+    static lv_obj_t * wifiPWD;
+    static lv_obj_t * rect_qr;
 
 // Style 
     static lv_style_t  style_btn_menu;         // Style for the button
@@ -176,7 +185,10 @@ static lv_obj_t *scr;
     static lv_style_t buttons_list_bank; // Buttons list bank style in List Bank Page.
     // Label 
     static lv_style_t style_t_name;
+    static lv_style_t style_t_setting;
+    static lv_style_t button_setting;
 
+    static lv_style_t * rect_style;
    
     static lv_style_t style_t_price;
 
@@ -202,6 +214,43 @@ static lv_obj_t *scr;
      static lv_obj_t * curr_bank4;
     static lv_obj_t * curr_bank5;
 //
+    static lv_obj_t * bs_WIFI;
+    static lv_obj_t * bs_BT;
+    static lv_obj_t * bs_BATTERY;
+    static lv_obj_t * bs_QR;
+    static lv_obj_t * bs_slideshow;
+    static lv_obj_t * bs_upload;
+    static lv_obj_t * bs_riverbase;
+    static lv_obj_t * bs_about;
+
+    static lv_obj_t * label_bs_WIFI;
+    static lv_obj_t * label_bs_BT;
+    static lv_obj_t * label_bs_BATTERY;
+    static lv_obj_t * label_bs_QR;
+    static lv_obj_t * label_bs_slideshow;
+    static lv_obj_t * label_bs_upload;
+    static lv_obj_t * label_bs_riverbase;
+    static lv_obj_t * label_bs_about;
+    static lv_obj_t * label_setting_page;
+
+    static lv_obj_t * bs_WIFI_;
+    static lv_obj_t * bs_BT_;
+    static lv_obj_t * bs_BATTERY_;
+    static lv_obj_t * bs_QR_;
+    static lv_obj_t * bs_slideshow_;
+    static lv_obj_t * bs_upload_;
+    static lv_obj_t * bs_riverbase_;
+    static lv_obj_t * bs_about_;
+    static lv_obj_t * backhome;
+    static lv_obj_t * rect_under_setting;
+
+    
+    
+
+    
+    
+    
+
 
 static lv_img_dsc_t * list_bank[] = {&acleda_white,&aba_pay,&canadia};
 static  char* rielqr[] = {
@@ -234,7 +283,8 @@ static int8_t s_menu = 0 ; // 0 home; 1 menufood; 3 setting; 4 List bank; 5 wifi
 ///
 static bool s_create_b = 0 ;
 static bool s_rect_b = 0; 
-
+static char * qrwifi = "WIFI:T:WPA;S:alphass;P:password;H:;;"; 
+static char * menuurl = "https://javacreativecafe.com/cafe/see-the-menu/";
 /**
  * @brief i2c master initialization
  */
@@ -295,6 +345,7 @@ static void bank_popup_disp(uint8_t state_bank, char* name, bool currency);
 static void bank_disp(uint8_t state_bank, char* name, bool currency,int16_t posx, int16_t posy);
 static void bank_hide_disp(uint8_t state_bank, char* name, bool currency,int16_t posx, int16_t posy);
 static void list_bank_disp();
+static void show_home(lv_event_t * e);
 static void delete_object_timer(lv_timer_t *timer){
     lv_obj_del(rect_home_visible);
 }
@@ -515,6 +566,7 @@ static void drag_release_handler(lv_event_t *e)
 /* void list bank event there will be function but will improve later*/
 static void l_bank_evnt0(lv_event_t * e) {
             // Get the button that triggered the event
+             lv_obj_del(rect_list);
             s_swipe_bank = 0;
             s_currency = 0;
             s_menu = 0;
@@ -524,6 +576,7 @@ static void l_bank_evnt0(lv_event_t * e) {
 }
 static void l_bank_evnt1(lv_event_t * e) {
             // Get the button that triggered the event
+             lv_obj_del(rect_list);
             s_swipe_bank = 0;
             s_currency = 1;
             s_menu = 0;
@@ -533,6 +586,7 @@ static void l_bank_evnt1(lv_event_t * e) {
 }
 static void l_bank_evnt2(lv_event_t * e) {
             // Get the button that triggered the event
+             lv_obj_del(rect_list);
             s_swipe_bank = 1;
             s_currency = 0;
             s_menu = 0;
@@ -542,6 +596,7 @@ static void l_bank_evnt2(lv_event_t * e) {
 }
 static void l_bank_evnt3(lv_event_t * e) {
             // Get the button that triggered the event
+             lv_obj_del(rect_list);
             s_swipe_bank = 1;
             s_currency = 1;
             s_menu = 0;
@@ -551,6 +606,7 @@ static void l_bank_evnt3(lv_event_t * e) {
 }
 static void l_bank_evnt4(lv_event_t * e) {
             // Get the button that triggered the event
+             lv_obj_del(rect_list);
             s_swipe_bank = 2;
             s_currency = 0;
             s_menu = 0;
@@ -560,6 +616,7 @@ static void l_bank_evnt4(lv_event_t * e) {
 }
 static void l_bank_evnt5(lv_event_t * e) {
             // Get the button that triggered the event
+             lv_obj_del(rect_list);
             s_swipe_bank = 2;
             s_currency = 1;
             s_menu = 0;
@@ -574,6 +631,8 @@ static void l_bank_evnt5(lv_event_t * e) {
 
 static void list_bank_disp(){
     rect_list =  lv_obj_create(lv_scr_act());
+    lv_obj_add_style(rect_list, &rect_style, 0);
+
     lv_obj_align(rect_list, LV_ALIGN_CENTER, 0, -24);
     lv_obj_set_size(rect_list,EXAMPLE_LCD_H_RES,760);
     /* Style Configurations */
@@ -584,97 +643,87 @@ static void list_bank_disp(){
     lv_obj_add_state(b_listbank,LV_STATE_CHECKED);
    
     bank0 = lv_btn_create(rect_list);
-    bank1 = lv_btn_create(rect_list);
+    // bank1 = lv_btn_create(rect_list);
     bank2 = lv_btn_create(rect_list);
-    bank3 = lv_btn_create(rect_list);
+    // bank3 = lv_btn_create(rect_list);
     bank4 = lv_btn_create(rect_list);
-    bank5 = lv_btn_create(rect_list);
+    // bank5 = lv_btn_create(rect_list);
  
     // add style 
     lv_obj_add_style(bank0, &buttons_list_bank, 0);    
-    lv_obj_add_style(bank1, &buttons_list_bank, 0);    
+    // lv_obj_add_style(bank1, &buttons_list_bank, 0);    
     lv_obj_add_style(bank2, &buttons_list_bank, 0);    
-    lv_obj_add_style(bank3, &buttons_list_bank, 0);    
+    // lv_obj_add_style(bank3, &buttons_list_bank, 0);    
     lv_obj_add_style(bank4, &buttons_list_bank, 0);    
-    lv_obj_add_style(bank5, &buttons_list_bank, 0);    
+    // lv_obj_add_style(bank5, &buttons_list_bank, 0);    
     
     // lvgl_ set size
 
      lv_obj_set_size(bank0,440,120);
-     lv_obj_set_size(bank1,440,120);
+    //  lv_obj_set_size(bank1,440,120);
      lv_obj_set_size(bank2,440,120);
-     lv_obj_set_size(bank3,440,120);
+    //  lv_obj_set_size(bank3,440,120);
      lv_obj_set_size(bank4,440,120);
-     lv_obj_set_size(bank5,440,120);
+    //  lv_obj_set_size(bank5,440,120);
 
      
     lv_obj_align(bank0, LV_ALIGN_TOP_MID,0, 20);
-    lv_obj_align(bank1, LV_ALIGN_TOP_MID,0, 160);
-    lv_obj_align(bank2, LV_ALIGN_TOP_MID,0, 300);
-    lv_obj_align(bank3, LV_ALIGN_TOP_MID,0, 440);
-    lv_obj_align(bank4, LV_ALIGN_TOP_MID,0, 580);
-    lv_obj_align(bank5, LV_ALIGN_TOP_MID,0, 720);
+    lv_obj_align(bank2, LV_ALIGN_TOP_MID,0, 160);
+    lv_obj_align(bank4, LV_ALIGN_TOP_MID,0, 300);
+    // lv_obj_align(bank3, LV_ALIGN_TOP_MID,0, 440);
+    // lv_obj_align(bank4, LV_ALIGN_TOP_MID,0, 580);
+    // lv_obj_align(bank5, LV_ALIGN_TOP_MID,0, 720);
 
     
 
     bank_bank0 = lv_img_create(bank0);
-    bank_bank1 = lv_img_create(bank1);
+    // bank_bank1 = lv_img_create(bank1);
     bank_bank2 = lv_img_create(bank2);
-    bank_bank3 = lv_img_create(bank3);
+    // bank_bank3 = lv_img_create(bank3);
     bank_bank4 = lv_img_create(bank4);
-    bank_bank5 = lv_img_create(bank5);
+    // bank_bank5 = lv_img_create(bank5);
 
-    curr_bank0 = lv_img_create(bank0);
-    curr_bank1 = lv_img_create(bank1);
-    curr_bank2 = lv_img_create(bank2);
-    curr_bank3 = lv_img_create(bank3);
-    curr_bank4 = lv_img_create(bank4);
-    curr_bank5 = lv_img_create(bank5);
-
+    // curr_bank0 = lv_img_create(bank0);
+    // curr_bank1 = lv_img_create(bank1);
+    // curr_bank2 = lv_img_create(bank2);
+    // curr_bank3 = lv_img_create(bank3);
+    // curr_bank4 = lv_img_create(bank4);
+    // curr_bank5 = lv_img_create(bank5);
 
     lv_img_set_src(bank_bank0, &acleda_white);
-    lv_img_set_src(bank_bank1, &acleda_white);
+    // lv_img_set_src(bank_bank1, &acleda_white);
     lv_img_set_src(bank_bank2, &aba_pay);
-    lv_img_set_src(bank_bank3, &aba_pay);
+    // lv_img_set_src(bank_bank3, &aba_pay);
     lv_img_set_src(bank_bank4, &canadia);
-    lv_img_set_src(bank_bank5, &canadia);
+    // lv_img_set_src(bank_bank5, &canadia);
 
-    lv_img_set_src(curr_bank0, &riel_red);
-    lv_img_set_src(curr_bank1, &dollar_red);
-    lv_img_set_src(curr_bank2, &riel_red);
-    lv_img_set_src(curr_bank3, &dollar_red);
-    lv_img_set_src(curr_bank4, &riel_red);
-    lv_img_set_src(curr_bank5, &dollar_red);
+    // lv_img_set_src(curr_bank0, &riel_red);
+    // lv_img_set_src(curr_bank1, &dollar_red);
+    // lv_img_set_src(curr_bank2, &riel_red);
+    // lv_img_set_src(curr_bank3, &dollar_red);
+    // lv_img_set_src(curr_bank4, &riel_red);
+    // lv_img_set_src(curr_bank5, &dollar_red);
     ESP_LOGI("DEBUG", "ERROR HERE LINE 646");
-    lv_obj_align(bank_bank0,LV_ALIGN_RIGHT_MID,0, 0);
-    lv_obj_align(bank_bank1,LV_ALIGN_RIGHT_MID,0, 0);
-    lv_obj_align(bank_bank2,LV_ALIGN_RIGHT_MID,0, 0);
-    lv_obj_align(bank_bank3,LV_ALIGN_RIGHT_MID,0, 0);
-    lv_obj_align(bank_bank4,LV_ALIGN_RIGHT_MID,-20, 0);
-    lv_obj_align(bank_bank5,LV_ALIGN_RIGHT_MID,-20, 0);
+    lv_obj_align(bank_bank0,LV_ALIGN_CENTER,0, 0);
+    // lv_obj_align(bank_bank1,LV_ALIGN_CENTER,0, 0);
+    lv_obj_align(bank_bank2,LV_ALIGN_CENTER,0, 0);
+    // lv_obj_align(bank_bank3,LV_ALIGN_CENTER,0, 0);
+    lv_obj_align(bank_bank4,LV_ALIGN_CENTER, 0, 0);
+    // lv_obj_align(bank_bank5,LV_ALIGN_CENTER,-20, 0);
 
-    lv_obj_align(curr_bank0,LV_ALIGN_LEFT_MID,0, 0);
-    lv_obj_align(curr_bank1,LV_ALIGN_LEFT_MID,0, 0);
-    lv_obj_align(curr_bank2,LV_ALIGN_LEFT_MID,0, 0);
-    lv_obj_align(curr_bank3,LV_ALIGN_LEFT_MID,0, 0);
-    lv_obj_align(curr_bank4,LV_ALIGN_LEFT_MID,0, 0);
-    lv_obj_align(curr_bank5,LV_ALIGN_LEFT_MID,0, 0);
-    
-
+    // lv_obj_align(curr_bank0,LV_ALIGN_LEFT_MID,0, 0);
+    // lv_obj_align(curr_bank1,LV_ALIGN_LEFT_MID,0, 0);
+    // lv_obj_align(curr_bank2,LV_ALIGN_LEFT_MID,0, 0);
+    // lv_obj_align(curr_bank3,LV_ALIGN_LEFT_MID,0, 0);
+    // lv_obj_align(curr_bank4,LV_ALIGN_LEFT_MID,0, 0);
+    // lv_obj_align(curr_bank5,LV_ALIGN_LEFT_MID,0, 0);
     
     lv_obj_add_event_cb(bank0,l_bank_evnt0, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_event_cb(bank1,l_bank_evnt1, LV_EVENT_CLICKED, NULL);
+    // lv_obj_add_event_cb(bank1,l_bank_evnt1, LV_EVENT_CLICKED, NULL);
     lv_obj_add_event_cb(bank2,l_bank_evnt2, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_event_cb(bank3,l_bank_evnt3, LV_EVENT_CLICKED, NULL);
+    // lv_obj_add_event_cb(bank3,l_bank_evnt3, LV_EVENT_CLICKED, NULL);
     lv_obj_add_event_cb(bank4,l_bank_evnt4, LV_EVENT_CLICKED, NULL);
-    lv_obj_add_event_cb(bank5,l_bank_evnt5, LV_EVENT_CLICKED, NULL);
-
-    
-
-
-    
-    
-
+    // lv_obj_add_event_cb(bank5,l_bank_evnt5, LV_EVENT_CLICKED, NULL);
     
 }
 static void bank_hide_disp(uint8_t state_bank, char* name, bool currency, int16_t posx, int16_t posy){
@@ -682,7 +731,7 @@ static void bank_hide_disp(uint8_t state_bank, char* name, bool currency, int16_
      lv_obj_t * qr_hide;
     rect_home_hide = lv_obj_create(lv_scr_act());
     //   lv_style_set_bg_color(&blue, );
-    
+    lv_obj_add_style(rect_home_hide, &rect_style, 0);
     
     // lv_style_set_bg_opa(&rect_home_visible, LV_OPA_COVER); // Set background opacity to fully cover
     
@@ -749,10 +798,13 @@ static void bank_hide_disp(uint8_t state_bank, char* name, bool currency, int16_
 }
 
 static void bank_disp(uint8_t state_bank, char* name, bool currency,int16_t posx, int16_t posy){
+
      // Currency using boolean when 0 = riel , 1 = dollar ;
-   
+    s_menu = 0;
 
     rect_home_visible = lv_obj_create(lv_scr_act());
+    lv_obj_add_style(rect_home_visible, &rect_style, 0);
+
     lv_obj_align(rect_home_visible, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_size(rect_home_visible,EXAMPLE_LCD_H_RES,750);
 
@@ -810,12 +862,10 @@ static void bank_disp(uint8_t state_bank, char* name, bool currency,int16_t posx
 }
 static void bank_popup_disp(uint8_t state_bank, char* name, bool currency){
      // Currency using boolean when 0 = riel , 1 = dollar ;
-   
-    lv_obj_t * qr;
-
+     s_menu = 0;
     rect_home_visible = lv_obj_create(lv_scr_act());
     //   lv_style_set_bg_color(&blue, );
-    
+    lv_obj_add_style(rect_home_visible, &rect_style, 0);
     
     // lv_style_set_bg_opa(&rect_home_visible, LV_OPA_COVER); // Set background opacity to fully cover
     
@@ -845,7 +895,7 @@ static void bank_popup_disp(uint8_t state_bank, char* name, bool currency){
     
     lv_obj_align(t_price, LV_ALIGN_LEFT_MID, 60, -90);
     // // Currency 
-    qr = lv_qrcode_create(rect_home_visible, 300,  lv_color_white(), lv_color_black());
+    qr = lv_qrcode_create(rect_home_visible, 270,  lv_color_white(), lv_color_black());
     currency_img = lv_img_create(qr);
 
     lv_obj_align(currency_img, LV_ALIGN_CENTER, 0, 0);
@@ -854,8 +904,8 @@ static void bank_popup_disp(uint8_t state_bank, char* name, bool currency){
     //  // lv_obj_set_style_transform_angle(qr,2700, 0);
 
     
-    lv_obj_set_style_border_color(qr, lv_color_white(), 0);
-    lv_obj_set_style_border_width(qr, 5, 0);
+    // lv_obj_set_style_border_color(qr, lv_color_white(), 0);
+    // lv_obj_set_style_border_width(qr, 0, 0);
     lv_obj_align(qr, LV_ALIGN_CENTER, 0, 120);
     //  lv_obj_add_event_cb(rect_home_visible, drag_event_handler, LV_EVENT_ALL, NULL);
      lv_obj_set_pos(rect_home_visible, 0, 22);
@@ -866,7 +916,7 @@ static void bank_popup_disp(uint8_t state_bank, char* name, bool currency){
         lv_qrcode_update(qr, rielqr[state_bank], strlen(rielqr[state_bank]));
         lv_label_set_text(t_price, priceriel);
 
-       
+
     
     }
     else{
@@ -898,13 +948,220 @@ lv_anim_start(&a2);
     lv_obj_set_pos(rect_home_visible, 0, -24);
 //    lv_obj_set_size(rect_home_visible,480,760);
 }
-static void clear_bank_disp();
+
+
+static void wifi_display(){
+    s_menu = 5;
+    rect_wifi = lv_obj_create(lv_scr_act());
+    lv_obj_add_style(rect_wifi, &rect_style, 0);
+
+    lv_obj_align(rect_wifi, LV_ALIGN_CENTER, 0, -24);
+    lv_obj_set_size(rect_wifi,EXAMPLE_LCD_H_RES,760);
+
+     logo_company = lv_img_create(rect_wifi);
+    lv_img_set_src(logo_company, &coffee_house);
+    lv_obj_align(logo_company,LV_ALIGN_TOP_MID,0, 50 );
+    wifiqr = lv_label_create(rect_wifi);
+    lv_obj_align(wifiqr,LV_ALIGN_TOP_MID,0, 200 );
+    lv_obj_add_style(wifiqr,&style_t_price, 0);
+   
+    lv_label_set_text(wifiqr, "WIFI QR");
+
+    rect_qr = lv_obj_create(rect_wifi);
+    lv_obj_set_size(rect_qr, 300, 300);
+    lv_obj_align(rect_qr, LV_ALIGN_CENTER, 0,50);
+    lv_obj_set_style_border_color(rect_qr,lv_color_hex(0xCBA02D),0);   
+
+    qr = lv_qrcode_create(rect_qr, 260,lv_color_black(), lv_color_white());
+    lv_obj_align(qr, LV_ALIGN_CENTER, 0,0);
+    lv_qrcode_update(qr, qrwifi,strlen(qrwifi));
+
+    wifiSSID = lv_label_create(rect_wifi);
+    lv_obj_align(wifiSSID, LV_ALIGN_CENTER, 0, 250);
+    lv_obj_add_style(wifiSSID, &style_t_name, 0);
+    lv_label_set_text(wifiSSID, "SSID: alphass");
+    
+    wifiPWD = lv_label_create(rect_wifi);
+    lv_obj_align(wifiPWD, LV_ALIGN_CENTER, 0, 300);
+    lv_obj_add_style(wifiPWD, &style_t_name, 0);
+    lv_label_set_text(wifiPWD, "PWD: password");
+
+    
+
+}
+static void menu_display(){
+    
+    s_menu = 2;
+    rect_menu = lv_obj_create(lv_scr_act());
+    lv_obj_add_style(rect_menu, &rect_style, 0);
+
+    lv_obj_align(rect_menu, LV_ALIGN_CENTER, 0, -24);
+    lv_obj_set_size(rect_menu,EXAMPLE_LCD_H_RES,760);
+
+    logo_company = lv_img_create(rect_menu);
+    lv_img_set_src(logo_company, &coffee_house);
+    lv_obj_align(logo_company,LV_ALIGN_TOP_MID,0, 50 );
+    wifiqr = lv_label_create(rect_menu);
+    lv_obj_align(wifiqr,LV_ALIGN_TOP_MID,0, 200 );
+    lv_obj_add_style(wifiqr,&style_t_price, 0);
+   
+    lv_label_set_text(wifiqr, "MENU");
+
+    rect_qr = lv_obj_create(rect_menu);
+    lv_obj_set_size(rect_qr, 350, 350);
+    lv_obj_align(rect_qr, LV_ALIGN_CENTER, 0,100);
+    lv_obj_set_style_border_color(rect_qr,lv_color_hex(0xCBA02D),0);   
+
+    qr = lv_qrcode_create(rect_qr, 280,lv_color_black(), lv_color_white());
+    lv_obj_align(qr, LV_ALIGN_CENTER, 0,0);
+    lv_qrcode_update(qr, menuurl,strlen(menuurl));
+
+}
+static void setting_display(){
+    s_menu = 3;
+     lv_style_init(&button_setting);
+     lv_style_init(&style_t_setting);
+    lv_style_set_bg_opa(&button_setting, LV_OPA_TRANSP);
+    lv_style_set_border_opa(&button_setting, LV_OPA_TRANSP);
+    // lv_style_set_border_color (&button_setting,lv_color_hex(0xCBA02D));
+    // lv_style_set_text_font(&style_t_setting,&lv_font_montserrat_28);
+    lv_style_set_text_color(&style_t_setting, lv_color_black());
+    rect_setting = lv_obj_create(lv_scr_act());
+    lv_obj_align(rect_setting, LV_ALIGN_CENTER, 0, -24);
+    lv_obj_set_size(rect_setting,EXAMPLE_LCD_H_RES,760);
+    // lv_obj_align(rect_setting, LV_ALIGN_OUT_BOTTOM_MID, 0,-10);
+
+
+    label_setting_page = lv_label_create(rect_setting); ;
+    lv_obj_add_style(label_setting_page, &style_t_setting,0);
+    // lv_obj_set_style_text_font(label_setting_page,&lv_font_montserrat_26,0);
+    lv_obj_align(label_setting_page, LV_ALIGN_TOP_MID, 0, 10);
+    lv_label_set_text(label_setting_page, "SETTING");
+
+    // backhome = lv_label_create(rect_setting);
+    // lv_obj_add_style(backhome, &style_t_setting,0);
+    // lv_obj_align(backhome, LV_ALIGN_TOP_LEFT, 10, 10);
+    // lv_label_set_text(backhome, LV_SYMBOL_LEFT);
+    // lv_obj_add_event_cb(backhome, show_home,LV_EVENT_PRESSED,NULL);
 
 
 
 
 
+    rect_under_setting = lv_obj_create(rect_setting);
+    lv_obj_align(rect_under_setting, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_size(rect_under_setting,440,650);
+    lv_obj_set_flex_flow(rect_under_setting, LV_FLEX_FLOW_COLUMN);
+    lv_obj_add_style(rect_under_setting, &button_setting,0);
+    lv_obj_add_style(rect_setting, &button_setting,0);
 
+    bs_WIFI = lv_btn_create(rect_under_setting);
+    lv_obj_add_style(bs_WIFI, &button_setting,0);
+    lv_obj_set_size(bs_WIFI,400, 75);
+    lv_obj_align(bs_WIFI, LV_ALIGN_TOP_MID, 0, 300);
+    label_bs_WIFI = lv_label_create(bs_WIFI);
+    lv_obj_align(label_bs_WIFI, LV_ALIGN_LEFT_MID, 0, 0);
+    bs_WIFI_  = lv_label_create(bs_WIFI);
+    lv_obj_align(bs_WIFI_,LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(label_bs_WIFI, "WIFI");
+    lv_label_set_text(bs_WIFI_, LV_SYMBOL_RIGHT);
+    lv_obj_add_style(bs_WIFI_, &style_t_setting,0);
+    lv_obj_add_style(label_bs_WIFI, &style_t_setting,0);
+
+
+     bs_BT = lv_btn_create(rect_under_setting);
+    lv_obj_add_style(bs_BT, &button_setting,0);
+    lv_obj_set_size(bs_BT,400, 75);
+    lv_obj_align(bs_BT, LV_ALIGN_TOP_MID, 0, 300);
+    label_bs_BT = lv_label_create(bs_BT);
+    lv_obj_align(label_bs_BT, LV_ALIGN_LEFT_MID, 0, 0);
+    bs_BT_  = lv_label_create(bs_BT);
+    lv_obj_align(bs_BT_,LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(label_bs_BT, "BLUETOOTH");
+    lv_label_set_text(bs_BT_, LV_SYMBOL_RIGHT);
+    lv_obj_add_style(bs_BT_, &style_t_setting,0);
+    lv_obj_add_style(label_bs_BT, &style_t_setting,0);
+
+    bs_BATTERY = lv_btn_create(rect_under_setting);
+    lv_obj_add_style(bs_BATTERY, &button_setting,0);
+    lv_obj_set_size(bs_BATTERY,400, 75);
+    lv_obj_align(bs_BATTERY, LV_ALIGN_TOP_MID, 0, 300);
+    label_bs_BATTERY = lv_label_create(bs_BATTERY);
+    lv_obj_align(label_bs_BATTERY, LV_ALIGN_LEFT_MID, 0, 0);
+    bs_BATTERY_  = lv_label_create(bs_BATTERY);
+    lv_obj_align(bs_BATTERY_,LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(label_bs_BATTERY, "Battery & Sound");
+    lv_label_set_text(bs_BATTERY_, LV_SYMBOL_RIGHT);
+    lv_obj_add_style(bs_BATTERY_, &style_t_setting,0);
+    lv_obj_add_style(label_bs_BATTERY, &style_t_setting,0);
+
+    bs_QR = lv_btn_create(rect_under_setting);
+    lv_obj_add_style(bs_QR, &button_setting,0);
+    lv_obj_set_size(bs_QR,400, 75);
+    lv_obj_align(bs_QR, LV_ALIGN_TOP_MID, 0, 300);
+    label_bs_QR = lv_label_create(bs_QR);
+    lv_obj_align(label_bs_QR, LV_ALIGN_LEFT_MID, 0, 0);
+    bs_QR_  = lv_label_create(bs_QR);
+    lv_obj_align(bs_QR_,LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(label_bs_QR, "QR Setup");
+    lv_label_set_text(bs_QR_, LV_SYMBOL_RIGHT);
+    lv_obj_add_style(bs_QR_, &style_t_setting,0);
+    lv_obj_add_style(label_bs_QR, &style_t_setting,0);
+
+    bs_slideshow = lv_btn_create(rect_under_setting);
+    lv_obj_add_style(bs_slideshow, &button_setting,0);
+    lv_obj_set_size(bs_slideshow,400, 75);
+    lv_obj_align(bs_slideshow, LV_ALIGN_TOP_MID, 0, 300);
+    label_bs_slideshow = lv_label_create(bs_slideshow);
+    lv_obj_align(label_bs_slideshow, LV_ALIGN_LEFT_MID, 0, 0);
+    bs_slideshow_  = lv_label_create(bs_slideshow);
+    lv_obj_align(bs_slideshow_,LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(label_bs_slideshow, "Slide Show");
+    lv_label_set_text(bs_slideshow_, LV_SYMBOL_RIGHT);
+    lv_obj_add_style(bs_slideshow_, &style_t_setting,0);
+    lv_obj_add_style(label_bs_slideshow, &style_t_setting,0);
+
+    bs_upload = lv_btn_create(rect_under_setting);
+    lv_obj_add_style(bs_upload, &button_setting,0);
+    lv_obj_set_size(bs_upload,400, 75);
+    lv_obj_align(bs_upload, LV_ALIGN_TOP_MID, 0, 300);
+    label_bs_upload = lv_label_create(bs_upload);
+    lv_obj_align(label_bs_upload, LV_ALIGN_LEFT_MID, 0, 0);
+    bs_upload_  = lv_label_create(bs_upload);
+    lv_obj_align(bs_upload_,LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(label_bs_upload, "Upload");
+    lv_label_set_text(bs_upload_, LV_SYMBOL_RIGHT);
+    lv_obj_add_style(bs_upload_, &style_t_setting,0);
+    lv_obj_add_style(label_bs_upload, &style_t_setting,0);
+    
+    bs_riverbase = lv_btn_create(rect_under_setting);
+    lv_obj_add_style(bs_riverbase, &button_setting,0);
+    lv_obj_set_size(bs_riverbase,400, 75);
+    lv_obj_align(bs_riverbase, LV_ALIGN_TOP_MID, 0, 300);
+    label_bs_riverbase = lv_label_create(bs_riverbase);
+    lv_obj_align(label_bs_riverbase, LV_ALIGN_LEFT_MID, 0, 0);
+    bs_riverbase_  = lv_label_create(bs_riverbase);
+    lv_obj_align(bs_riverbase_,LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(label_bs_riverbase, "RiverBase API");
+    lv_label_set_text(bs_riverbase_, LV_SYMBOL_RIGHT);
+    lv_obj_add_style(bs_riverbase_, &style_t_setting,0);
+    lv_obj_add_style(label_bs_riverbase, &style_t_setting,0);
+
+    bs_about = lv_btn_create(rect_under_setting);
+    lv_obj_add_style(bs_about, &button_setting,0);
+    lv_obj_set_size(bs_about,400, 75);
+    lv_obj_align(bs_about, LV_ALIGN_TOP_MID, 0, 300);
+    label_bs_about = lv_label_create(bs_about);
+    lv_obj_align(label_bs_about, LV_ALIGN_LEFT_MID, 0, 0);
+    bs_about_  = lv_label_create(bs_about);
+    lv_obj_align(bs_about_,LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_label_set_text(label_bs_about, "About");
+    lv_label_set_text(bs_about_, LV_SYMBOL_RIGHT);
+    lv_obj_add_style(bs_about_, &style_t_setting,0);
+    lv_obj_add_style(label_bs_about, &style_t_setting,0);
+
+
+}
 ////////////////////////////////////////////////////////////////////////////////
 
 static void example_lvgl_touch_cb(lv_indev_drv_t * drv, lv_indev_data_t * data)
@@ -979,34 +1236,185 @@ static void example_increase_lvgl_tick(void *arg)
 static void show_list_bank_event(lv_event_t * e) {
             
             // Get the button that triggered the event
-            lv_obj_del(rect_list);
+            lv_obj_add_state(b_listbank, LV_STATE_CHECKED);
             lv_obj_clear_state(b_home, LV_STATE_CHECKED);
             lv_obj_clear_state(b_qrwifi, LV_STATE_CHECKED);
             lv_obj_clear_state(b_setting, LV_STATE_CHECKED);
             lv_obj_clear_state(b_foodmenu, LV_STATE_CHECKED);
             ESP_LOGI("MENU","STATE:%d",s_menu);
-            // switch(s_menu){
-            //     case 0:
+            if (s_menu != 4){
+            switch(s_menu){
+                case 0:
                     // lv_obj_clean(rect_home_hide);// HIDE NOT EXIST YET
-                    lv_obj_clean(rect_home_visible);
-            //         break;
-            //     case 1:
-            //         lv_obj_del(rect_menu);
-            //         break;
-            //     case 2:
-            //         lv_obj_del(rect_setting);
-            //         break;
-            //     case 3:
-            //         lv_obj_clean(rect_list);
-            //         break;
-            //     case 4:
-            //         lv_obj_del(rect_wifi);
-            //         break;
+                    lv_obj_del(rect_home_visible);
+                    break;
+                case 1: 
+                    lv_obj_del(rect_home_hide);
+                case 2:
+                    lv_obj_del(rect_menu);
+                    break;
+                case 3:
+                    lv_obj_del(rect_setting);
+                    break;
+                case 4:
+                    lv_obj_del(rect_list);
+                    break;
+                case 5:
+                    lv_obj_del(rect_wifi);
+                    break;
                    
-            // }
-            ESP_LOGI("DEBUG","GO_BACK_LIST_BANK");
-            s_menu = 3;
+            }
+          
+            s_menu = 4;
             list_bank_disp();
+    }
+}
+static void show_qr_wifi_event(lv_event_t * e) {
+            
+            // Get the button that triggered the event
+            lv_obj_add_state(b_qrwifi, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_home, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_listbank, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_setting, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_foodmenu, LV_STATE_CHECKED);
+            ESP_LOGI("MENU","STATE:%d",s_menu);
+            if (s_menu != 5){
+            switch(s_menu){
+                case 0:
+                    // lv_obj_clean(rect_home_hide);// HIDE NOT EXIST YET
+                    lv_obj_del(rect_home_visible);
+                    break;
+                case 1: 
+                    lv_obj_del(rect_home_hide);
+                case 2:
+                    lv_obj_del(rect_menu);
+                    break;
+                case 3:
+                    lv_obj_del(rect_setting);
+                    break;
+                case 4:
+                    lv_obj_del(rect_list);
+                    break;
+                case 5:
+                    lv_obj_del(rect_wifi);
+                    break;
+                   
+            }
+        
+            s_menu = 5;
+            wifi_display();
+    }
+}
+static void show_foodmenu_event(lv_event_t * e) {
+            
+            // Get the button that triggered the event
+            lv_obj_add_state(b_foodmenu, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_home, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_listbank, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_setting, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_qrwifi, LV_STATE_CHECKED);
+            ESP_LOGI("MENU","STATE:%d",s_menu);
+            if (s_menu != 2){
+            switch(s_menu){
+                case 0:
+                    // lv_obj_clean(rect_home_hide);// HIDE NOT EXIST YET
+                    lv_obj_del(rect_home_visible);
+                    break;
+                case 1: 
+                    lv_obj_del(rect_home_hide);
+                case 2:
+                    lv_obj_del(rect_menu);
+                    break;
+                case 3:
+                    lv_obj_del(rect_setting);
+                    break;
+                case 4:
+                    lv_obj_del(rect_list);
+                    break;
+                case 5:
+                    lv_obj_del(rect_wifi);
+                    break;
+                   
+            }
+        
+            s_menu = 2;
+            menu_display();
+    }
+}
+static void show_setting_event(lv_event_t * e) {
+            
+            // Get the button that triggered the event
+            lv_obj_add_state(b_setting, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_home, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_listbank, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_foodmenu, LV_STATE_CHECKED);
+            lv_obj_clear_state(b_qrwifi, LV_STATE_CHECKED);
+            ESP_LOGI("MENU","STATE:%d",s_menu);
+            if (s_menu != 3){
+            switch(s_menu){
+                case 0:
+                    // lv_obj_clean(rect_home_hide);// HIDE NOT EXIST YET
+                    lv_obj_del(rect_home_visible);
+                    break;
+                case 1: 
+                    lv_obj_del(rect_home_hide);
+                case 2:
+                    lv_obj_del(rect_menu);
+                    break;
+                case 3:
+                    lv_obj_del(rect_setting);
+                    break;
+                case 4:
+                    lv_obj_del(rect_list);
+                    break;
+                case 5:
+                    lv_obj_del(rect_wifi);
+                    break;
+                   
+            }
+        
+            s_menu = 3;
+            setting_display();
+    }
+}
+
+static void show_home(lv_event_t * e) {
+            
+            // Get the button that triggered the event
+        lv_obj_add_state(b_home, LV_STATE_CHECKED);
+        lv_obj_clear_state(b_listbank, LV_STATE_CHECKED);
+        lv_obj_clear_state(b_qrwifi, LV_STATE_CHECKED);
+        lv_obj_clear_state(b_setting, LV_STATE_CHECKED);
+        lv_obj_clear_state(b_foodmenu, LV_STATE_CHECKED);
+        if (s_menu != 0){
+            
+            ESP_LOGI("MENU","STATE:%d",s_menu);
+            switch(s_menu){
+                case 0:
+                    // lv_obj_del(rect_home_hide);// HIDE NOT EXIST YET
+                    lv_obj_del(rect_home_visible);
+                    break;
+                case 1: 
+                    lv_obj_del(rect_home_hide);
+                case 2:
+                    lv_obj_del(rect_menu);
+                    break;
+                case 3:
+                    lv_obj_del(rect_setting);
+                    break;
+                case 4:
+                    lv_obj_del(rect_list);
+                    break;
+                case 5:
+                    lv_obj_del(rect_wifi);
+                    break;
+                   
+            }
+            ESP_LOGI("DEBUG","GO_BACK_LIST_BANK");
+
+                s_menu = 0;
+                bank_popup_disp(0, name[0],0);
+        }
 }
 /*truly end*/
 
@@ -1143,7 +1551,13 @@ static void menu_bar()
     lv_label_set_text(label_setting, LV_SYMBOL_SETTINGS);
 
     lv_obj_add_event_cb(b_listbank, show_list_bank_event,LV_EVENT_CLICKED, NULL);
-    lv_obj_add_state(b_listbank, LV_STATE_DEFAULT);
+    
+    lv_obj_add_event_cb(b_qrwifi, show_qr_wifi_event,LV_EVENT_CLICKED, NULL);
+
+    lv_obj_add_event_cb(b_foodmenu, show_foodmenu_event,LV_EVENT_CLICKED, NULL);
+
+    lv_obj_add_event_cb(b_setting, show_setting_event,LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(b_home, show_home,LV_EVENT_CLICKED, NULL);
     
 }
 
@@ -1345,8 +1759,8 @@ void app_main(void)
      // Text Style 
      lv_style_init(&style_t_name);
      lv_style_init(&style_t_price);
-
-   
+    lv_style_init(&rect_style);
+    
     
     lv_style_set_text_font(&style_t_name, &lv_font_montserrat_22);
     lv_style_set_text_align(&style_t_name,LV_TEXT_ALIGN_LEFT);
@@ -1364,11 +1778,15 @@ void app_main(void)
     lv_obj_add_style(scr, &style_no_scroll, 0);
     lv_obj_clear_flag(scr, LV_OBJ_FLAG_SCROLLABLE);   // Disable scrollability
     lv_obj_set_scrollbar_mode(scr, LV_SCROLLBAR_MODE_OFF);
+
+    lv_style_set_bg_opa(&rect_style, LV_OPA_TRANSP);
+    lv_style_set_border_opa(&rect_style, LV_OPA_TRANSP);
     menu_bar();
     //  bank_popup_disp(s_swipe_bank,name[s_swipe_bank],s_currency);
 
-    s_menu = 3;
-    list_bank_disp();
+    
+    lv_obj_add_state(b_home, LV_STATE_CHECKED);
+    bank_popup_disp(0,name[0],0);
     
     // bank_hide_disp(s_swipe_bank,name[s_swipe_bank],s_currency,0,-24);
     /*Set data*/
