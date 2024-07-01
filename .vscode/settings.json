@@ -6,7 +6,10 @@
         "lv_example_png.h": "c",
         "array": "c",
         "string": "c",
-        "string_view": "c"
+        "string_view": "c",
+        "typeindex": "c",
+        "typeinfo": "c",
+        "random": "c"
     },
     "idf.adapterTargetName": "esp32s3",
     "idf.openOcdConfigs": [
